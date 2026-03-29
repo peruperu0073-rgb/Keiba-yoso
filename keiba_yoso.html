@@ -1039,23 +1039,67 @@ function calcJushoScore(keika) {
 }
 
 // Rtスコア（過去走の最高Rtで判定）
+// 距離適性（好走実績方式・上限6pt）
+function calcNewDistScore(keika, targetDist) {
+  if (!targetDist) return 0;
+  const td = parseInt(targetDist);
+  const validKeika = (keika || []).filter(k => k.pastDist && k.pastDist !== '');
+  if (!validKeika.length) return 0;
+  const sameDist = validKeika.filter(k => parseInt(k.pastDist) === td);
+  if (sameDist.some(k => k.rank === 1)) return 6;
+  if (sameDist.some(k => k.rank <= 3)) return 4;
+  if (validKeika.some(k => parseInt(k.pastDist) > td && k.rank === 1)) return 3;
+  if (sameDist.length > 0) return 1;
+  return 0;
+}
+
 function calcRtScore(keika) {
   const rts = (keika || []).map(k => k.rt).filter(r => r != null && r > 0);
   if (!rts.length) return 0;
   const maxRt = Math.max(...rts);
-  if (maxRt >= 120) return 5;
-  if (maxRt >= 115) return 4;
-  if (maxRt >= 110) return 3;
-  if (maxRt >= 105) return 2;
-  return 1;
+  if (maxRt >= 120) return 30;
+  if (maxRt >= 115) return 22;
+  if (maxRt >= 110) return 15;
+  if (maxRt >= 105) return 9;
+  return 4;
 }
 
 // 上がりタイム⚡判定（全体上がりより速い走）
+// 距離別⚡上がり基準
+function getAgariThreshold(distM) {
+  const d = parseInt(distM) || 0;
+  if (d <= 1400) return 34.0;
+  if (d <= 2000) return 33.5;
+  if (d <= 2400) return 33.5;
+  return 34.0; // 3000m以上
+}
+
+// ⚡判定：絶対値基準 OR 全体上がりとの比較（どちらかでOK）
+function isAgariFlash(k) {
+  if (k.agari == null) return false;
+  const threshold = getAgariThreshold(k.pastDist);
+  const absFlash = k.agari <= threshold;
+  const relFlash = k.agariAll != null && k.agari < k.agariAll - 0.5;
+  return absFlash || relFlash;
+}
+
 function getAgariFlashCount(keika) {
-  return (keika || []).filter(k => {
-    if (k.agari == null || k.agariAll == null) return false;
-    return k.agari < k.agariAll - 0.5; // 全体より0.5秒以上速い
-  }).length;
+  return (keika || []).filter(k => isAgariFlash(k)).length;
+}
+
+// 距離変化フラグ判定
+function getDistChangeFlag(keika, targetDist) {
+  if (!targetDist || !keika || !keika.length) return null;
+  const td = parseInt(targetDist);
+  const validKeika = keika.filter(k => k.pastDist && k.pastDist !== '');
+  if (validKeika.length < 3) return null;
+
+  const longer  = validKeika.filter(k => parseInt(k.pastDist) > td).length;
+  const shorter = validKeika.filter(k => parseInt(k.pastDist) < td).length;
+
+  if (longer >= 3) return 'down';   // 距離短縮傾向
+  if (shorter >= 3) return 'up';    // 距離延長傾向
+  return null;
 }
 
 // 騎手datalist更新
@@ -1451,34 +1495,31 @@ function analyzeAll() {
 
 // ===== HORSE ANALYSIS =====
 function analyzeHorse(h, race, course) {
-  let scores = { course: 0, dist: 0, blood: 0, kyakushitsu: 0, jusho: 0, rt: 0, ana: 0 };
+  let scores = { course: 0, dist: 0, blood: 0, kyakushitsu: 0, rt: 0 };
   let flags = [];
 
-  // --- 1. コース適性（既存ロジック維持） ---
+  // --- 1. コース適性（上限10pt） ---
   const courseExp = autoDetectCourseExp('auto', h.keika, race.course);
-  const courseScoreMap = { win: 5, placed: 4, ran: 2, similar: 1, none: 0 };
+  const courseScoreMap = { win: 10, placed: 7, ran: 4, similar: 2, none: 0 };
   scores.course = courseScoreMap[courseExp] || 0;
 
-  // --- 2. 距離適性（加点式・青天井） ---
-  scores.dist = calcDistScore(h.keika, race.distance);
+  // --- 2. 距離適性（上限6pt・好走実績方式） ---
+  scores.dist = calcNewDistScore(h.keika, race.distance);
 
-  // --- 3. 血統適性 ---
-  scores.blood = calcBloodScore(h.sire, course, race);
+  // --- 3. 血統適性（上限5pt） ---
+  scores.blood = Math.min(calcBloodScore(h.sire, course, race), 5);
 
   // --- 4. 脚質判定 ---
   const kyakushitsu = calcKyakushitsu(h.keika, race.tosu);
 
-  // --- 5. 脚質×コース適合 ---
-  scores.kyakushitsu = calcKyakushitsuScore(kyakushitsu, course, race);
+  // --- 5. 脚質×展開（上限7pt） ---
+  scores.kyakushitsu = Math.min(calcKyakushitsuScore(kyakushitsu, course, race) * 1.4, 7);
+  scores.kyakushitsu = Math.round(scores.kyakushitsu);
 
-  // --- 6. 重賞実績（加点式・青天井） ---
-  scores.jusho = calcJushoScore(h.keika);
-
-  // --- 7. Rtスコア ---
+  // --- 6. Rtスコア（青天井） ---
   scores.rt = calcRtScore(h.keika);
 
-  // --- 8. 穴馬フラグ ---
-  // 重賞実績フラグ（既存）
+  // --- 7. 重賞実績フラグのみ（スコアなし） ---
   const jushoRenh = autoDetectJusho('auto', h.keika);
   if (jushoRenh === 'g1') flags.push('G1連対あり');
   else if (jushoRenh === 'g23') flags.push('重賞連対あり');
@@ -1487,6 +1528,7 @@ function analyzeHorse(h, race, course) {
   else if (jushoRenh === 'op') flags.push('OP/L連対あり');
   else if (jushoRenh === 'op_3rd') flags.push('OP/L・3着実績');
 
+  // --- 8. 穴馬フラグ（独立・スコア加算なし） ---
   if (hasCornerPushup(h.keika)) flags.push('3-4C押し上げ力');
   if (hasHighPaceGoodAgari(h.keika)) flags.push('ハイペース末脚');
   if (h.weight >= 500 && ['先行','好位差し'].includes(kyakushitsu)) flags.push('大型馬×先行脚質');
@@ -1496,7 +1538,7 @@ function analyzeHorse(h, race, course) {
     flags.push('前走不利あり');
   }
 
-  if (['win','placed'].includes(courseExp) && scores.dist >= 5) {
+  if (['win','placed'].includes(courseExp) && scores.dist >= 4) {
     flags.push('コース×距離実績');
   }
 
@@ -1509,33 +1551,49 @@ function analyzeHorse(h, race, course) {
     if (lowerRentai.length >= 3) flags.push('上昇馬（下級連対3回以上）');
   }
 
-  // 末脚型フラグ（⚡が3回以上）
+  // 末脚型フラグ
   const flashCount = getAgariFlashCount(h.keika);
   if (flashCount >= 3) flags.push('末脚型（上がり最速級3回以上）');
 
-  // 高Rt穴馬フラグ（Rt110以上なのに着外が過半数）
+  // 距離変化フラグ（前走比±600m以上）
+  const prevDist = h.keika && h.keika.length ? parseInt(h.keika[0].pastDist) : null;
+  if (prevDist && !isNaN(prevDist)) {
+    const diff = race.distance - prevDist;
+    if (diff >= 600)  flags.push('📏距離大幅変更（延長）');
+    if (diff <= -600) flags.push('📏距離大幅変更（短縮）');
+  }
+
+  // 距離傾向フラグ（過去3走以上）
+  const distChange = getDistChangeFlag(h.keika, race.distance);
+  if (distChange === 'down') flags.push('⬇️距離短縮傾向（末脚注意）');
+  if (distChange === 'up')   flags.push('⬆️距離延長（スタミナ未知数）');
+
+  // 高Rt穴馬フラグ
   const highRtRaces = (h.keika || []).filter(k => k.rt != null && k.rt >= 110);
   const highRtOut = highRtRaces.filter(k => k.rank > 3);
   if (highRtRaces.length >= 2 && highRtOut.length >= highRtRaces.length / 2) {
     flags.push('高Rt×着外（能力秘めた穴馬）');
   }
 
-  scores.ana = Math.min(flags.length * 2, 10);
+  // 穴馬指数は独立（総合スコアに加算しない）
+  const anaScore = Math.min(flags.length * 2, 10);
 
   // --- 休み明け補正 ---
   let restPenalty = 0;
   if (h.rest === 'long') restPenalty = -2;
 
-  const totalScore = scores.course + scores.dist + scores.blood + scores.kyakushitsu + scores.jusho + scores.rt + scores.ana + restPenalty;
+  // 総合点 = Rt + コース + 脚質 + 血統 + 距離（穴馬指数・重賞実績は含まない）
+  const totalScore = scores.rt + scores.course + scores.kyakushitsu + scores.blood + scores.dist + restPenalty;
 
   return {
     ...h,
     kyakushitsu,
     scores,
     flags,
+    anaScore,
     totalScore: Math.max(0, totalScore),
     restPenalty,
-    rank: 0, // will be set after sort
+    rank: 0,
   };
 }
 
@@ -1688,17 +1746,14 @@ function renderHorseDetail(h) {
   const wc = WAKU_COLORS[h.waku] || ['#888','#fff'];
   const isAna = h.flags.length >= 2;
 
-  const maxDist  = Math.max(h.scores.dist, 15);
-  const maxJusho = Math.max(h.scores.jusho, 15);
+  const maxRt = Math.max(h.scores.rt, 30);
 
   const scoreItems = [
-    { label: 'コース適性', val: h.scores.course, max: 5,        color: '#5299e0' },
-    { label: '距離適性',   val: h.scores.dist,   max: maxDist,  color: '#52c97a' },
-    { label: '血統適性',   val: h.scores.blood,  max: 7,        color: '#9b72cf' },
-    { label: '脚質×展開', val: h.scores.kyakushitsu, max: 5,   color: '#e08050' },
-    { label: '重賞実績',   val: h.scores.jusho,  max: maxJusho, color: '#c9a84c' },
-    { label: 'Rtスコア',   val: h.scores.rt,     max: 5,        color: '#e05252' },
-    { label: '穴馬指数',   val: h.scores.ana,    max: 10,       color: '#ffd700' },
+    { label: 'Rtスコア',   val: h.scores.rt,          max: maxRt, color: '#e05252' },
+    { label: 'コース適性', val: h.scores.course,       max: 10,    color: '#5299e0' },
+    { label: '脚質×展開', val: h.scores.kyakushitsu,  max: 7,     color: '#e08050' },
+    { label: '血統適性',   val: h.scores.blood,        max: 5,     color: '#9b72cf' },
+    { label: '距離適性',   val: h.scores.dist,         max: 6,     color: '#52c97a' },
   ];
 
   return `
@@ -1720,12 +1775,17 @@ function renderHorseDetail(h) {
         <div class="score-row">
           <div class="score-label">${s.label}</div>
           <div class="score-bar-bg">
-            <div class="score-bar-fill" style="width:${(s.val/s.max)*100}%;background:${s.color};"></div>
+            <div class="score-bar-fill" style="width:${Math.min((s.val/s.max)*100,100)}%;background:${s.color};"></div>
           </div>
           <div class="score-val" style="color:${s.color}">${s.val}</div>
         </div>`).join('')}
 
-      ${h.flags.length ? `<div class="ana-flags">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>` : ''}
+      ${h.anaScore > 0 ? `
+        <div style="margin-top:10px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:10px;">
+          <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:6px;">⭐ 穴馬指数 ${h.anaScore}pt</div>
+          <div class="ana-flags">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>
+        </div>` :
+        h.flags.length ? `<div class="ana-flags" style="margin-top:8px;">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>` : ''}
       ${h.memo ? `<div style="margin-top:8px;font-size:11px;color:var(--accent);background:rgba(201,168,76,0.08);border-radius:6px;padding:6px 10px;">📝 ${h.memo}</div>` : ''}
       ${h.restPenalty < 0 ? `<div style="margin-top:6px;font-size:10px;color:var(--red);">⚠️ 休み明け補正 ${h.restPenalty}pt</div>` : ''}
 
@@ -1740,7 +1800,7 @@ function renderHorseDetail(h) {
                 const courseLabel = ci ? ci.name : (k.pastCourse||'—');
                 const distLabel = k.pastDist ? k.pastDist+'m' : '—';
                 const babaLabel = {good:'良',yayashige:'稍',heavy:'重',furyou:'不'}[k.pastBaba] || '—';
-                const isFlash = k.agari != null && k.agariAll != null && k.agari < k.agariAll - 0.5;
+                const isFlash = isAgariFlash(k);
                 const agariDisplay = k.agari != null
                   ? `${isFlash?'<span style="color:#ffd700;font-weight:700;">⚡</span>':''}${k.agari}s`
                   : '—';
