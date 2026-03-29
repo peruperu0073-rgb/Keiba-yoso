@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏇 Nami's 競馬予想システム</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3d;
+    --accent: #c9a84c;
+    --accent2: #e8c97a;
+    --red: #e05252;
+    --blue: #5299e0;
+    --green: #52c97a;
+    --purple: #9b72cf;
+    --text: #e8e8f0;
+    --text2: #9898b0;
+    --text3: #5a5a72;
+    --gold: #ffd700;
+    --silver: #c0c0c0;
+    --bronze: #cd7f32;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    background: linear-gradient(135deg, #0d0d18 0%, #1a1228 50%, #0d0d18 100%);
+    border-bottom: 1px solid var(--accent);
+    padding: 16px 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(201,168,76,0.15);
+  }
+
+  .header-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--accent2);
+    text-shadow: 0 0 20px rgba(201,168,76,0.4);
+  }
+
+  .header-sub {
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  /* ===== TABS ===== */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex: 1;
+    min-width: 80px;
+    min-height: 44px;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    cursor: pointer;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.2s;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: rgba(201,168,76,0.2);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .tab.active {
+    color: var(--accent2);
+    border-bottom-color: var(--accent);
+    background: rgba(201,168,76,0.05);
+  }
+  .tab:hover { color: var(--text2); }
+
+  /* ===== PANELS ===== */
+  .panel { display: none; padding: 16px; }
+  .panel.active { display: block; }
+
+  /* ===== SECTION ===== */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  /* ===== FORM ===== */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-grid.cols1 { grid-template-columns: 1fr; }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 10px;
+    color: var(--text3);
+    font-weight: 500;
+    letter-spacing: 1px;
+  }
+
+  input, select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Noto Sans JP', sans-serif;
+    padding: 9px 12px;
+    transition: border-color 0.2s;
+    outline: none;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(201,168,76,0.1);
+  }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  /* ===== BUTTON ===== */
+  .btn {
+    padding: 11px 20px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #0a0a0f;
+    width: 100%;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(201,168,76,0.3); }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-danger {
+    background: rgba(224,82,82,0.15);
+    color: var(--red);
+    border: 1px solid rgba(224,82,82,0.3);
+  }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+
+  /* ===== HORSE CARD ===== */
+  .horse-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+  .horse-card.has-flag {
+    border-color: rgba(201,168,76,0.5);
+    box-shadow: 0 0 12px rgba(201,168,76,0.1);
+  }
+
+  .horse-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .waku-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .horse-name-big {
+    font-size: 16px;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .badge-kyakushitsu { background: rgba(82,153,224,0.2); color: #7ab8f0; border: 1px solid rgba(82,153,224,0.4); }
+  .badge-score-high { background: rgba(201,168,76,0.2); color: var(--accent2); border: 1px solid rgba(201,168,76,0.4); }
+  .badge-score-mid { background: rgba(82,201,122,0.15); color: #7ae8a0; border: 1px solid rgba(82,201,122,0.3); }
+  .badge-score-low { background: rgba(90,90,114,0.3); color: var(--text3); border: 1px solid var(--border); }
+  .badge-ana { background: linear-gradient(135deg, rgba(201,168,76,0.3), rgba(232,201,122,0.3)); color: var(--gold); border: 1px solid rgba(201,168,76,0.6); animation: glowPulse 2s infinite; }
+  .badge-rank { background: rgba(155,114,207,0.2); color: #c4a0f0; border: 1px solid rgba(155,114,207,0.4); }
+
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(201,168,76,0.4); }
+    50% { box-shadow: 0 0 14px rgba(201,168,76,0.8); }
+  }
+
+  /* ===== SCORE BAR ===== */
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+  .score-label { color: var(--text3); width: 90px; flex-shrink: 0; }
+  .score-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+  .score-val { color: var(--text2); width: 24px; text-align: right; flex-shrink: 0; font-weight: 700; }
+
+  /* ===== KEIKA TABLE ===== */
+  .keika-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-top: 8px;
+  }
+  .keika-table th {
+    background: var(--bg);
+    color: var(--text3);
+    padding: 6px 4px;
+    text-align: center;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+  }
+  .keika-table td {
+    padding: 7px 4px;
+    text-align: center;
+    border-bottom: 1px solid rgba(42,42,61,0.5);
+    vertical-align: middle;
+  }
+  .keika-table tr:hover td { background: rgba(201,168,76,0.03); }
+
+  .rank-circle {
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  .rank-1 { background: rgba(255,215,0,0.2); color: var(--gold); border: 1px solid rgba(255,215,0,0.5); }
+  .rank-2 { background: rgba(192,192,192,0.2); color: var(--silver); border: 1px solid rgba(192,192,192,0.4); }
+  .rank-3 { background: rgba(205,127,50,0.2); color: var(--bronze); border: 1px solid rgba(205,127,50,0.4); }
+  .rank-other { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+
+  /* ===== ANA FLAGS ===== */
+  .ana-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .ana-flag {
+    font-size: 10px;
+    padding: 3px 8px;
+    background: rgba(255,215,0,0.1);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 4px;
+    color: var(--gold);
+  }
+
+  /* ===== TENKAI ===== */
+  .tenkai-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+  }
+  .tenkai-title {
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  /* ===== SUMMARY ===== */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .summary-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .summary-card-label { font-size: 10px; color: var(--text3); margin-bottom: 6px; }
+  .summary-card-val { font-size: 22px; font-weight: 900; color: var(--accent2); }
+
+  /* ===== RANKING LIST ===== */
+  .ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .ranking-pos {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    width: 30px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .ranking-info { flex: 1; }
+  .ranking-name { font-weight: 700; font-size: 15px; }
+  .ranking-meta { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .ranking-score {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--accent2);
+  }
+
+  /* ===== SAVED RACES ===== */
+  .saved-race-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .saved-race-info { flex: 1; }
+  .saved-race-name { font-weight: 700; }
+  .saved-race-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .btn-group { display: flex; gap: 6px; }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-close { cursor: pointer; color: var(--text3); font-size: 20px; }
+
+  /* ===== CORNER INPUT ===== */
+  .corner-inputs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .corner-label { font-size: 10px; color: var(--text3); text-align: center; margin-bottom: 2px; }
+
+  /* ===== PACE INDICATOR ===== */
+  .pace-indicator {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .pace-dot {
+    flex: 1;
+    padding: 8px 4px;
+    text-align: center;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .pace-dot.slow { background: rgba(82,201,122,0.15); color: #7ae8a0; }
+  .pace-dot.mid { background: rgba(201,168,76,0.15); color: var(--accent2); }
+  .pace-dot.high { background: rgba(224,82,82,0.15); color: #f08080; }
+  .pace-dot.selected { border-color: currentColor; }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+  }
+  .empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state-text { font-size: 13px; }
+
+  /* ===== DIVIDER ===== */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+
+  /* ===== TENKAI FLOW ===== */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .flow-chip {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .flow-arrow { color: var(--text3); }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--accent);
+    color: #0a0a0f;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    z-index: 300;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .mt8 { margin-top: 8px; }
+  .mt12 { margin-top: 12px; }
+  .flex-gap { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">🏇 KEIBA YOSO</div>
+  <div class="header-sub">Nami's 競馬予想システム</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('input')">📝 入力</button>
+  <button class="tab" onclick="switchTab('result')">📊 結果</button>
+  <button class="tab" onclick="switchTab('tenkai')">🌀 展開</button>
+  <button class="tab" onclick="switchTab('saved')">💾 保存</button>
+</div>
+
+<!-- ==================== INPUT TAB ==================== -->
+<div class="panel active" id="tab-input" style="display:block">
+
+  <!-- レース情報 -->
+  <div class="section">
+    <div class="section-title">🏟 レース情報</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>レース名</label>
+        <input type="text" id="race-name" placeholder="例：大阪杯 (G1)">
+      </div>
+      <div class="form-group">
+        <label>競馬場</label>
+        <select id="race-course">
+          <option value="">選択</option>
+          <option value="tokyo">東京（525.9m）</option>
+          <option value="nakayama">中山（310m）</option>
+          <option value="hanshin_outer">阪神・外（473.6m）</option>
+          <option value="hanshin_inner">阪神・内（356.5m）</option>
+          <option value="kyoto_outer">京都・外（404m）</option>
+          <option value="kyoto_inner">京都・内（328m）</option>
+          <option value="chukyo">中京（412.5m）</option>
+          <option value="niigata_outer">新潟・外（659m）</option>
+          <option value="niigata_inner">新潟・内（359m）</option>
+          <option value="fukushima">福島（292m）</option>
+          <option value="kokura">小倉（293m）</option>
+          <option value="sapporo">札幌（266.1m）</option>
+          <option value="hakodate">函館（262m）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>距離</label>
+        <select id="race-distance">
+          <option value="">選択</option>
+          <option value="1200">1200m</option>
+          <option value="1400">1400m</option>
+          <option value="1600">1600m</option>
+          <option value="1800">1800m</option>
+          <option value="2000">2000m</option>
+          <option value="2200">2200m</option>
+          <option value="2400">2400m</option>
+          <option value="2500">2500m</option>
+          <option value="3000">3000m</option>
+          <option value="3200">3200m</option>
+          <option value="3600">3600m</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>芝 / ダート</label>
+        <select id="race-surface">
+          <option value="turf">芝</option>
+          <option value="dirt">ダート</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>グレード</label>
+        <select id="race-grade">
+          <option value="">選択</option>
+          <option value="G1">G1</option>
+          <option value="G2">G2</option>
+          <option value="G3">G3</option>
+          <option value="JP">JPn(JpnI〜III)</option>
+          <option value="L">L（リステッド）</option>
+          <option value="OP">OP（オープン）</option>
+          <option value="3win">3勝クラス</option>
+          <option value="2win">2勝クラス</option>
+          <option value="1win">1勝クラス</option>
+          <option value="maiden">未勝利</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>馬場状態</label>
+        <select id="race-baba">
+          <option value="good">良</option>
+          <option value="yayashige">稍重</option>
+          <option value="heavy">重</option>
+          <option value="furyou">不良</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>クッション値</label>
+        <input type="number" id="race-cushion" placeholder="例：9.8" step="0.1" min="0" max="15">
+      </div>
+      <div class="form-group">
+        <label>開幕何日目</label>
+        <select id="race-kaibaku">
+          <option value="1">1〜2日目（超開幕）</option>
+          <option value="3">3〜4日目</option>
+          <option value="5" selected>5〜6日目</option>
+          <option value="7">7〜8日目（中盤）</option>
+          <option value="9">9日目以降（荒れ馬場）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>逃げ馬の数</label>
+        <select id="race-nigemas">
+          <option value="0">0頭（スロー濃厚）</option>
+          <option value="1" selected>1頭（標準）</option>
+          <option value="2">2頭（ミドル）</option>
+          <option value="3">3頭以上（ハイ濃厚）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>出走頭数</label>
+        <input type="number" id="race-tosu" placeholder="例：16" min="3" max="18" value="16">
+      </div>
+    </div>
+  </div>
+
+  <!-- 出走馬追加 -->
+  <div class="section">
+    <div class="section-title">🐴 出走馬データ</div>
+    <button class="btn btn-primary" onclick="openHorseModal()">＋ 出走馬を追加</button>
+    <div id="horse-list" class="mt12">
+      <div class="empty-state">
+        <div class="empty-state-icon">🐴</div>
+        <div class="empty-state-text">まだ出走馬が登録されていないわ</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="analyzeAll()" style="margin-bottom:16px">
+    🔍 分析・印をつける
+  </button>
+</div>
+
+<!-- ==================== RESULT TAB ==================== -->
+<div class="panel" id="tab-result" style="display:none">
+  <div id="result-content">
+    <div class="empty-state">
+      <div class="empty-state-icon">📊</div>
+      <div class="empty-state-text">「分析・印をつける」を押してね</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TENKAI TAB ==================== -->
+<div class="panel" id="tab-tenkai" style="display:none">
+  <div id="tenkai-content">
+    <div class="empty-state">
+      <div class="empty-state-icon">🌀</div>
+      <div class="empty-state-text">「分析・印をつける」を押してね</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SAVED TAB ==================== -->
+<div class="panel" id="tab-saved" style="display:none">
+  <div class="section">
+    <div class="section-title">💾 保存済みレース</div>
+    <div class="flex-gap mt8">
+      <button class="btn btn-primary" onclick="saveRace()" style="flex:1">現在のデータを保存</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearAll()" style="flex:0;white-space:nowrap">全削除</button>
+    </div>
+    <div id="saved-list" class="mt12"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📤 端末間でデータを移動</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.8;">
+      書き出したJSONファイルをLINEやメールで自分に送れば、どの端末でも読み込めるわよ✨
+    </div>
+    <div class="flex-gap">
+      <button class="btn btn-primary" onclick="exportJSON()" style="flex:1">📤 全データを書き出す</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" style="flex:1">📥 ファイルを読み込む</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+    <div id="import-result" style="margin-top:10px;font-size:11px;"></div>
+  </div>
+</div>
+
+<!-- ==================== HORSE MODAL ==================== -->
+<div class="modal-overlay" id="horse-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-title-text">🐴 出走馬を追加</span>
+      <span class="modal-close" onclick="closeHorseModal()">✕</span>
+    </div>
+
+    <input type="hidden" id="edit-horse-idx" value="-1">
+
+    <div class="section-title" style="margin-bottom:10px">基本情報</div>
+    <div class="form-grid cols3">
+      <div class="form-group">
+        <label>枠番</label>
+        <select id="h-waku">
+          <option value="1">1枠</option><option value="2">2枠</option>
+          <option value="3">3枠</option><option value="4">4枠</option>
+          <option value="5">5枠</option><option value="6">6枠</option>
+          <option value="7">7枠</option><option value="8">8枠</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>馬番</label>
+        <input type="number" id="h-umaban" min="1" max="18" placeholder="1">
+      </div>
+      <div class="form-group">
+        <label>性別</label>
+        <select id="h-sex">
+          <option value="牡">牡</option>
+          <option value="牝">牝</option>
+          <option value="せん">せん</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid cols3 mt8">
+      <div class="form-group">
+        <label>年齢</label>
+        <select id="h-agenum">
+          <option value="2">2歳</option>
+          <option value="3">3歳</option>
+          <option value="4" selected>4歳</option>
+          <option value="5">5歳</option>
+          <option value="6">6歳</option>
+          <option value="7">7歳</option>
+          <option value="8">8歳</option>
+          <option value="9">9歳</option>
+          <option value="10">10歳</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-grid cols1 mt8">
+      <div class="form-group">
+        <label>馬名</label>
+        <input type="text" id="h-name" placeholder="例：アドマイヤテラ">
+      </div>
+    </div>
+
+    <div class="form-grid mt8">
+      <div class="form-group">
+        <label>騎手</label>
+        <input type="text" id="h-jockey" placeholder="例：川田将雅">
+      </div>
+      <div class="form-group">
+        <label>馬体重 (kg)</label>
+        <input type="number" id="h-weight" placeholder="例：486" min="300" max="700">
+      </div>
+    </div>
+
+    <div class="form-grid mt8">
+      <div class="form-group">
+        <label>父（サイヤー）</label>
+        <select id="h-sire">
+          <option value="">選択</option>
+          <option value="hearts">ハーツクライ系</option>
+          <option value="roberto">ロベルト系（エピファ等）</option>
+          <option value="deep">ディープインパクト系</option>
+          <option value="kizna">キズナ系</option>
+          <option value="roadkana">ロードカナロア系</option>
+          <option value="kitasan">キタサンブラック系</option>
+          <option value="other">その他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>重賞連対経験</label>
+        <select id="h-jushorenh">
+          <option value="auto">過去走から自動判別</option>
+          <option value="g1">G1連対あり（手動）</option>
+          <option value="g23">G2/G3連対あり（手動）</option>
+          <option value="op">OP/L連対あり（手動）</option>
+          <option value="g1_3rd">G1・3着あり（手動）</option>
+          <option value="g23_3rd">G2/G3・3着あり（手動）</option>
+          <option value="op_3rd">OP/L・3着あり（手動）</option>
+          <option value="none">なし（手動）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-grid mt8">
+      <div class="form-group">
+        <label>コース経験</label>
+        <select id="h-course-exp">
+          <option value="auto">過去走から自動判別</option>
+          <option value="win">今回コース勝ち経験（手動）</option>
+          <option value="placed">今回コース着内あり（手動）</option>
+          <option value="ran">今回コース走ったことある（手動）</option>
+          <option value="similar">似たコース（手動）</option>
+          <option value="none">なし（手動）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>距離経験</label>
+        <select id="h-dist-exp">
+          <option value="auto">過去走から自動判別</option>
+          <option value="win">今回距離勝ち経験（手動）</option>
+          <option value="placed">今回距離着内あり（手動）</option>
+          <option value="ran">今回距離走ったことある（手動）</option>
+          <option value="longer">今回より長い距離で勝ち（手動）</option>
+          <option value="none">なし（手動）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:10px">過去成績（最大5走）</div>
+
+    <div id="keika-entries">
+      <!-- rows added dynamically -->
+    </div>
+    <datalist id="racename-datalist"></datalist>
+    <button class="btn btn-secondary btn-sm mt8" onclick="addKeikaRow()" style="width:100%">＋ 成績を追加（最大5走）</button>
+
+    <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:10px">特記事項</div>
+    <div class="form-grid cols1">
+      <div class="form-group">
+        <label>前走・過去の不利・メモ</label>
+        <textarea id="h-memo" placeholder="例：前走で騎手落馬により競走中止。コース取りで包まれて追えなかった等"></textarea>
+      </div>
+      <div class="form-group">
+        <label>前走からの休み明け</label>
+        <select id="h-rest">
+          <option value="normal">中3〜8週（通常ローテ）</option>
+          <option value="medium">中9〜16週（やや間隔あき）</option>
+          <option value="long">中17週以上（休み明け）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mt12">
+      <button class="btn btn-primary" onclick="saveHorse()">✅ 保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== STATE =====
+let horses = [];
+let raceAnalyzed = false;
+
+const WAKU_COLORS = {
+  1: ['#fff','#111'], 2: ['#111','#fff'],
+  3: ['#e05252','#fff'], 4: ['#5299e0','#fff'],
+  5: ['#f0c040','#111'], 6: ['#52c97a','#111'],
+  7: ['#e08050','#fff'], 8: ['#c070c0','#fff']
+};
+
+const COURSE_DATA = {
+  tokyo:        { straight: 525.9, type: 'wide',  slope: false, corners: 4, name: '東京' },
+  nakayama:     { straight: 310,   type: 'small', slope: true,  corners: 4, name: '中山' },
+  hanshin_outer:{ straight: 473.6, type: 'mid',   slope: true,  corners: 4, name: '阪神外' },
+  hanshin_inner:{ straight: 356.5, type: 'small', slope: true,  corners: 6, name: '阪神内' },
+  kyoto_outer:  { straight: 404,   type: 'mid',   slope: false, corners: 4, name: '京都外' },
+  kyoto_inner:  { straight: 328,   type: 'small', slope: false, corners: 4, name: '京都内' },
+  chukyo:       { straight: 412.5, type: 'mid',   slope: false, corners: 4, name: '中京' },
+  niigata_outer:{ straight: 659,   type: 'wide',  slope: false, corners: 2, name: '新潟外' },
+  niigata_inner:{ straight: 359,   type: 'small', slope: false, corners: 4, name: '新潟内' },
+  fukushima:    { straight: 292,   type: 'small', slope: false, corners: 4, name: '福島' },
+  kokura:       { straight: 293,   type: 'small', slope: false, corners: 4, name: '小倉' },
+  sapporo:      { straight: 266.1, type: 'small', slope: false, corners: 4, name: '札幌' },
+  hakodate:     { straight: 262,   type: 'small', slope: false, corners: 4, name: '函館' },
+};
+
+// ===== TABS =====
+function switchTab(name) {
+  const names = ['input','result','tenkai','saved'];
+
+  // タブのアクティブ状態
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', names[i] === name);
+  });
+
+  // パネルの表示・非表示を style.display で直接制御（iOS Safari対策）
+  names.forEach(n => {
+    const el = document.getElementById('tab-' + n);
+    if (el) {
+      el.classList.remove('active');
+      el.style.display = (n === name) ? 'block' : 'none';
+    }
+  });
+
+  if (name === 'saved') renderSaved();
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== MODAL =====
+function openHorseModal(idx) {
+  document.getElementById('horse-modal').classList.add('open');
+  document.getElementById('edit-horse-idx').value = idx !== undefined ? idx : -1;
+  document.getElementById('modal-title-text').textContent = idx !== undefined ? '🐴 出走馬を編集' : '🐴 出走馬を追加';
+
+  // reset keika rows
+  document.getElementById('keika-entries').innerHTML = '';
+  keikaCount = 0;
+
+  if (idx !== undefined) {
+    const h = horses[idx];
+    document.getElementById('h-waku').value   = h.waku;
+    document.getElementById('h-umaban').value = h.umaban;
+    document.getElementById('h-sex').value    = h.sex || (h.age?.replace(/[0-9]/g,'') || '牡');
+    document.getElementById('h-agenum').value = h.age?.replace(/[^0-9]/g,'') || h.age || '4';
+    document.getElementById('h-name').value   = h.name;
+    document.getElementById('h-jockey').value = h.jockey;
+    document.getElementById('h-weight').value = h.weight;
+    document.getElementById('h-sire').value   = h.sire;
+    document.getElementById('h-jushorenh').value  = h.jushoRenh;
+    document.getElementById('h-course-exp').value = h.courseExp;
+    document.getElementById('h-dist-exp').value   = h.distExp;
+    document.getElementById('h-memo').value   = h.memo;
+    document.getElementById('h-rest').value   = h.rest;
+    if (h.keika && h.keika.length) {
+      h.keika.forEach(k => addKeikaRow(k));
+    } else { addKeikaRow(); }
+  } else {
+    clearModalForm();
+    addKeikaRow();
+  }
+}
+
+function closeHorseModal() {
+  document.getElementById('horse-modal').classList.remove('open');
+}
+
+function clearModalForm() {
+  ['h-name','h-jockey','h-weight','h-memo','h-umaban'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('h-waku').value    = '1';
+  document.getElementById('h-sex').value     = '牡';
+  document.getElementById('h-agenum').value  = '4';
+  document.getElementById('h-sire').value    = '';
+  document.getElementById('h-jushorenh').value = 'auto';
+  document.getElementById('h-course-exp').value = 'auto';
+  document.getElementById('h-dist-exp').value   = 'auto';
+  document.getElementById('h-rest').value    = 'normal';
+}
+
+// 数値入力フィールドを安全に取得（空・0・未入力はnull）
+function getNumericInput(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const raw = el.value;
+  if (raw === '' || raw === null || raw === undefined) return null;
+  const n = parseFloat(raw);
+  if (isNaN(n) || n <= 0) return null;
+  return n;
+}
+
+// ===== 自動判別関数 =====
+function autoDetectJusho(manualVal, keika) {
+  if (manualVal !== 'auto') return manualVal;
+  // 連対（1・2着）
+  const rentai = (keika || []).filter(k => k.rank <= 2).map(k => k.grade);
+  if (rentai.some(g => g === 'G1')) return 'g1';
+  if (rentai.some(g => ['G2','G3'].includes(g))) return 'g23';
+  if (rentai.some(g => ['L','OP','JP'].includes(g))) return 'op';
+  // 3着（複勝圏）
+  const fukusho = (keika || []).filter(k => k.rank === 3).map(k => k.grade);
+  if (fukusho.some(g => g === 'G1')) return 'g1_3rd';
+  if (fukusho.some(g => ['G2','G3'].includes(g))) return 'g23_3rd';
+  if (fukusho.some(g => ['L','OP','JP'].includes(g))) return 'op_3rd';
+  return 'none';
+}
+
+function autoDetectCourseExp(manualVal, keika, targetCourse) {
+  if (manualVal !== 'auto') return manualVal;
+  if (!targetCourse) return 'none';
+  const targetInfo = COURSE_DATA[targetCourse];
+
+  // pastCourseが未選択（空欄）のものはスキップ
+  const validKeika = (keika || []).filter(k => k.pastCourse && k.pastCourse !== '');
+  if (!validKeika.length) return 'none';
+
+  const matches = validKeika.filter(k => k.pastCourse === targetCourse);
+  if (matches.some(k => k.rank === 1)) return 'win';
+  if (matches.some(k => k.rank <= 3)) return 'placed';
+  if (matches.length > 0) return 'ran';
+
+  // 似たコース（直線長さ±50m以内）
+  if (targetInfo) {
+    const similar = validKeika.some(k => {
+      const ci = COURSE_DATA[k.pastCourse];
+      return ci && Math.abs(ci.straight - targetInfo.straight) <= 50;
+    });
+    if (similar) return 'similar';
+  }
+  return 'none';
+}
+
+function autoDetectDistExp(manualVal, keika, targetDist) {
+  if (manualVal !== 'auto') return manualVal;
+  if (!targetDist) return 'none';
+  const td = parseInt(targetDist);
+  if (isNaN(td)) return 'none';
+
+  // pastDistが未選択（空欄）のものはスキップ
+  const validKeika = (keika || []).filter(k => k.pastDist && k.pastDist !== '');
+  if (!validKeika.length) return 'none';
+
+  const matches = validKeika.filter(k => parseInt(k.pastDist) === td);
+  if (matches.some(k => k.rank === 1)) return 'win';
+  if (matches.some(k => k.rank <= 3)) return 'placed';
+  if (matches.length > 0) return 'ran';
+
+  // 今回より長い距離で勝ち
+  const longerWin = validKeika.some(k => parseInt(k.pastDist) > td && k.rank === 1);
+  if (longerWin) return 'longer';
+  return 'none';
+}
+let keikaCount = 0;
+
+// 登録済み馬の全レース名を重複なしで返す
+function getKnownRaceNames() {
+  const names = new Set();
+  horses.forEach(h => {
+    (h.keika || []).forEach(k => { if (k.raceName) names.add(k.raceName); });
+  });
+  return [...names].sort();
+}
+
+// レース名入力欄のdatalistを更新
+function refreshRaceNameList() {
+  const list = document.getElementById('racename-datalist');
+  if (!list) return;
+  const names = getKnownRaceNames();
+  list.innerHTML = names.map(n => `<option value="${n}">`).join('');
+}
+
+// レース名が入力されたとき、既存のデータから共有項目を自動補完
+function onRaceNameInput(idx) {
+  const nameEl = document.getElementById('k'+idx+'-racename');
+  if (!nameEl) return;
+  const entered = nameEl.value.trim();
+  if (!entered) return;
+
+  // 他の馬の同名レースを探す
+  let found = null;
+  for (const h of horses) {
+    for (const k of (h.keika || [])) {
+      if (k.raceName === entered) { found = k; break; }
+    }
+    if (found) break;
+  }
+  if (!found) return;
+
+  // 共有項目（ペース・頭数・全体上がり・グレード・競馬場・距離・馬場）を自動セット
+  const fields = [
+    ['k'+idx+'-grade',     found.grade],
+    ['k'+idx+'-tosu',      found.tosu],
+    ['k'+idx+'-pace',      found.pace],
+    ['k'+idx+'-agari-all', found.agariAll],
+    ['k'+idx+'-course',    found.pastCourse],
+    ['k'+idx+'-dist',      found.pastDist],
+    ['k'+idx+'-baba',      found.pastBaba],
+  ];
+  fields.forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el && val) el.value = val;
+  });
+
+  showToast(`「${entered}」の共有情報を自動入力したわ✨`);
+}
+
+function addKeikaRow(data) {
+  if (keikaCount >= 5) { showToast('最大5走まで入れられるわ'); return; }
+  const idx = keikaCount++;
+  const div = document.createElement('div');
+  div.id = 'keika-row-'+idx;
+  div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;';
+
+  const tosuOptions = Array.from({length:16},(_,i)=>i+3).map(n=>`<option value="${n}"${data&&data.tosu==n?' selected':''}>${n}頭</option>`).join('');
+  const rankOptions = Array.from({length:18},(_,i)=>i+1).map(n=>{
+    const sel = data&&data.rank==n?' selected':'';
+    return `<option value="${n}"${sel}>${n}着</option>`;
+  }).join('');
+
+  const makeCorner = (num) => {
+    const saved = data && data['c'+num];
+    const blankSel = (!saved || saved === '—') ? ' selected' : '';
+    const numOpts = Array.from({length:18},(_,i)=>i+1).map(n=>{
+      const s = saved == String(n) ? ' selected' : '';
+      return `<option value="${n}"${s}>${n}</option>`;
+    }).join('');
+    return `<div><div class="corner-label">${num}C</div><select style="padding:5px 2px;font-size:11px;text-align:center;"><option value=""${blankSel}>—</option>${numOpts}</select></div>`;
+  };
+
+  const gradeOpts = ['G1','G2','G3','JP','L','OP','3勝','2勝','1勝','未勝利'].map(g=>`<option value="${g}"${data&&data.grade==g?' selected':''}>${g}</option>`).join('');
+
+  const courseOpts = ['','tokyo','nakayama','hanshin_outer','hanshin_inner','kyoto_outer','kyoto_inner','chukyo','niigata_outer','niigata_inner','fukushima','kokura','sapporo','hakodate'].map(v=>{
+    const label = v ? (COURSE_DATA[v]?.name || v) : '選択';
+    return `<option value="${v}"${data&&data.pastCourse==v?' selected':''}>${label}</option>`;
+  }).join('');
+
+  const distOpts = ['1200','1400','1600','1800','2000','2200','2400','2500','3000','3200','3600'].map(d=>`<option value="${d}"${data&&data.pastDist==d?' selected':''}>${d}m</option>`).join('');
+
+  const babaOpts = [['good','良'],['yayashige','稍重'],['heavy','重'],['furyou','不良']].map(([v,l])=>`<option value="${v}"${data&&data.pastBaba==v?' selected':''}>${l}</option>`).join('');
+
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:10px;color:var(--text3);font-weight:700;">第${idx+1}走</span>
+      <button class="btn btn-danger btn-sm" onclick="removeKeikaRow(${idx})">削除</button>
+    </div>
+
+    <div class="form-group" style="margin-bottom:8px;">
+      <label>レース名</label>
+      <input type="text" id="k${idx}-racename" list="racename-datalist"
+        placeholder="例：高松宮記念2025"
+        value="${data&&data.raceName||''}"
+        oninput="onRaceNameInput(${idx})"
+        style="font-size:12px;">
+    </div>
+
+    <div class="form-grid cols3" style="gap:6px;margin-bottom:8px;">
+      <div class="form-group">
+        <label>競馬場 <span style="color:var(--accent);font-size:9px;">※共有</span></label>
+        <select id="k${idx}-course" style="padding:6px 4px;font-size:11px;">${courseOpts}</select>
+      </div>
+      <div class="form-group">
+        <label>距離 <span style="color:var(--accent);font-size:9px;">※共有</span></label>
+        <select id="k${idx}-dist" style="padding:6px 4px;font-size:11px;">${distOpts}</select>
+      </div>
+      <div class="form-group">
+        <label>馬場 <span style="color:var(--accent);font-size:9px;">※共有</span></label>
+        <select id="k${idx}-baba" style="padding:6px 4px;font-size:11px;">${babaOpts}</select>
+      </div>
+    </div>
+
+    <div class="form-grid" style="gap:6px;">
+      <div class="form-group">
+        <label>グレード <span style="color:var(--accent);font-size:9px;">※共有</span></label>
+        <select id="k${idx}-grade" style="padding:6px 8px;font-size:12px;">${gradeOpts}</select>
+      </div>
+      <div class="form-group">
+        <label>着順</label>
+        <select id="k${idx}-rank" style="padding:6px 8px;font-size:12px;">${rankOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>頭数 <span style="color:var(--accent);font-size:9px;">※共有</span></label>
+        <select id="k${idx}-tosu" style="padding:6px 8px;font-size:12px;">${tosuOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>ペース <span style="color:var(--accent);font-size:9px;">※共有</span></label>
+        <select id="k${idx}-pace" style="padding:6px 8px;font-size:12px;">
+          <option value="slow"${data&&data.pace=='slow'?' selected':''}>スロー</option>
+          <option value="mid"${data&&data.pace=='mid'?' selected':''}>ミドル</option>
+          <option value="high"${data&&data.pace=='high'?' selected':''}>ハイ</option>
+          <option value="unknown"${data&&data.pace=='unknown'?' selected':''}>不明</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:8px;">
+      <label style="font-size:10px;color:var(--text3);">コーナー通過順（1〜4コーナー）</label>
+      <div class="corner-inputs" style="margin-top:4px;">
+        ${makeCorner(1)}${makeCorner(2)}${makeCorner(3)}${makeCorner(4)}
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:8px;gap:6px;">
+      <div class="form-group">
+        <label>上がり3F（秒）</label>
+        <input type="number" id="k${idx}-agari" placeholder="例：34.2" step="0.1" min="30" max="45" value="${data&&data.agari||''}">
+      </div>
+      <div class="form-group">
+        <label>全体上がり3F <span style="color:var(--accent);font-size:9px;">※共有</span></label>
+        <input type="number" id="k${idx}-agari-all" placeholder="例：35.5" step="0.1" min="30" max="45" value="${data&&data.agariAll||''}">
+      </div>
+    </div>
+  `;
+
+  document.getElementById('keika-entries').appendChild(div);
+
+  if (data) {
+    const sels = div.querySelectorAll('.corner-inputs select');
+    ['c1','c2','c3','c4'].forEach((k,i)=>{
+      if (data[k]) sels[i].value = data[k];
+    });
+  }
+
+  // datalist更新
+  refreshRaceNameList();
+}
+
+function removeKeikaRow(idx) {
+  const el = document.getElementById('keika-row-'+idx);
+  if (el) el.remove();
+}
+
+function collectKeikaRows() {
+  const rows = [];
+  for (let i = 0; i < keikaCount; i++) {
+    const row = document.getElementById('keika-row-'+i);
+    if (!row) continue;
+    const sels = row.querySelectorAll('.corner-inputs select');
+    const toCorner = v => (v && v !== '' && v !== '—') ? v : '—';
+    rows.push({
+      raceName:   document.getElementById('k'+i+'-racename')?.value.trim() || '',
+      pastCourse: document.getElementById('k'+i+'-course')?.value || '',
+      pastDist:   document.getElementById('k'+i+'-dist')?.value || '',
+      pastBaba:   document.getElementById('k'+i+'-baba')?.value || 'good',
+      grade:      document.getElementById('k'+i+'-grade')?.value || '',
+      rank:       parseInt(document.getElementById('k'+i+'-rank')?.value) || 1,
+      tosu:       parseInt(document.getElementById('k'+i+'-tosu')?.value) || 16,
+      pace:       document.getElementById('k'+i+'-pace')?.value || 'mid',
+      c1: toCorner(sels[0]?.value),
+      c2: toCorner(sels[1]?.value),
+      c3: toCorner(sels[2]?.value),
+      c4: toCorner(sels[3]?.value),
+      agari:    getNumericInput('k'+i+'-agari'),
+      agariAll: getNumericInput('k'+i+'-agari-all'),
+    });
+  }
+  return rows;
+}
+
+// ===== SAVE HORSE =====
+function saveHorse() {
+  const name = document.getElementById('h-name').value.trim();
+  if (!name) { showToast('馬名を入力してね！'); return; }
+
+  const sex    = document.getElementById('h-sex').value;
+  const agenum = document.getElementById('h-agenum').value;
+  const keika  = collectKeikaRows();
+
+  // 自動判別
+  const raceInfo = {
+    course:   document.getElementById('race-course').value,
+    distance: document.getElementById('race-distance').value,
+  };
+  const jushoRenh = autoDetectJusho(document.getElementById('h-jushorenh').value, keika);
+  const courseExp = autoDetectCourseExp(document.getElementById('h-course-exp').value, keika, raceInfo.course);
+  const distExp   = autoDetectDistExp(document.getElementById('h-dist-exp').value, keika, raceInfo.distance);
+
+  const horse = {
+    waku:      parseInt(document.getElementById('h-waku').value),
+    umaban:    parseInt(document.getElementById('h-umaban').value) || 0,
+    sex,
+    age:       agenum,
+    name,
+    jockey:    document.getElementById('h-jockey').value,
+    weight:    parseInt(document.getElementById('h-weight').value) || 0,
+    sire:      document.getElementById('h-sire').value,
+    jushoRenh,
+    courseExp,
+    distExp,
+    memo:      document.getElementById('h-memo').value,
+    rest:      document.getElementById('h-rest').value,
+    keika,
+  };
+
+  const editIdx = parseInt(document.getElementById('edit-horse-idx').value);
+  if (editIdx >= 0) {
+    horses[editIdx] = horse;
+  } else {
+    horses.push(horse);
+  }
+
+  closeHorseModal();
+  renderHorseList();
+  showToast(`${name} を登録したわ！`);
+}
+
+// ===== RENDER HORSE LIST =====
+function renderHorseList() {
+  const container = document.getElementById('horse-list');
+  if (!horses.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🐴</div><div class="empty-state-text">まだ出走馬が登録されていないわ</div></div>';
+    return;
+  }
+
+  container.innerHTML = horses.map((h, i) => {
+    const wc = WAKU_COLORS[h.waku] || ['#888','#fff'];
+    return `
+      <div class="horse-card">
+        <div class="horse-header">
+          <div class="waku-badge" style="background:${wc[0]};color:${wc[1]};">${h.waku}</div>
+          <div class="horse-name-big">${h.umaban ? h.umaban+'番 ' : ''}${h.name}</div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-secondary btn-sm" onclick="openHorseModal(${i})">編集</button>
+            <button class="btn btn-danger btn-sm" onclick="removeHorse(${i})">削除</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);">${(h.sex||'')}${h.age}歳 | ${h.jockey||'騎手未入力'} | ${h.weight?h.weight+'kg':''}</div>
+      </div>`;
+  }).join('');
+}
+
+function removeHorse(i) {
+  horses.splice(i, 1);
+  renderHorseList();
+  showToast('削除したわ');
+}
+
+// ===== ANALYZE =====
+function analyzeAll() {
+  if (!horses.length) { showToast('出走馬を登録してね！'); return; }
+
+  const raceInfo = {
+    name: document.getElementById('race-name').value || 'レース名未入力',
+    course: document.getElementById('race-course').value,
+    distance: parseInt(document.getElementById('race-distance').value) || 2000,
+    surface: document.getElementById('race-surface').value,
+    grade: document.getElementById('race-grade').value,
+    baba: document.getElementById('race-baba').value,
+    cushion: parseFloat(document.getElementById('race-cushion').value) || 0,
+    kaibaku: parseInt(document.getElementById('race-kaibaku').value) || 5,
+    nigemas: parseInt(document.getElementById('race-nigemas').value) || 1,
+    tosu: parseInt(document.getElementById('race-tosu').value) || 16,
+  };
+
+  const courseInfo = COURSE_DATA[raceInfo.course] || { straight: 400, type: 'mid', slope: false, name: '不明' };
+
+  const analyzed = horses.map(h => analyzeHorse(h, raceInfo, courseInfo));
+  analyzed.sort((a,b) => b.totalScore - a.totalScore);
+
+  renderResult(analyzed, raceInfo, courseInfo);
+  renderTenkai(analyzed, raceInfo, courseInfo);
+  switchTab('result');
+  showToast('分析完了よ！💅');
+}
+
+// ===== HORSE ANALYSIS =====
+function analyzeHorse(h, race, course) {
+  let scores = { course: 0, dist: 0, blood: 0, kyakushitsu: 0, ana: 0 };
+  let flags = [];
+
+  // 毎回過去走データから強制再計算（保存値は完全に無視）
+  const courseExp = autoDetectCourseExp('auto', h.keika, race.course);
+  const distExp   = autoDetectDistExp('auto', h.keika, race.distance);
+  const jushoRenh = autoDetectJusho('auto', h.keika);
+
+  // --- 1. コース適性 ---
+  const courseScore = { win: 5, placed: 4, ran: 2, similar: 1, none: 0 };
+  scores.course = courseScore[courseExp] || 0;
+
+  // --- 2. 距離適性 ---
+  const distScore = { win: 5, placed: 4, ran: 2, longer: 3, none: 0 };
+  scores.dist = distScore[distExp] || 0;
+
+  // --- 3. 血統適性 ---
+  scores.blood = calcBloodScore(h.sire, course, race);
+
+  // --- 4. 脚質判定 ---
+  const kyakushitsu = calcKyakushitsu(h.keika, race.tosu);
+
+  // --- 5. 脚質×コース適合 ---
+  scores.kyakushitsu = calcKyakushitsuScore(kyakushitsu, course, race);
+
+  // --- 6. 重賞連対 ---
+  const jushoScore = { g1: 5, g23: 4, op: 2, g1_3rd: 3, g23_3rd: 2, op_3rd: 1, none: 0 };
+  scores.jusho = jushoScore[jushoRenh] || 0;
+
+  // --- 7. 穴馬フラグ ---
+  if (jushoRenh === 'g1') flags.push('G1連対あり');
+  else if (jushoRenh === 'g23') flags.push('重賞連対あり');
+  else if (jushoRenh === 'g1_3rd') flags.push('G1・3着実績');
+  else if (jushoRenh === 'g23_3rd') flags.push('重賞3着実績');
+  else if (jushoRenh === 'op') flags.push('OP/L連対あり');
+  else if (jushoRenh === 'op_3rd') flags.push('OP/L・3着実績');
+
+  if (hasCornerPushup(h.keika)) flags.push('3-4C押し上げ力');
+  if (hasHighPaceGoodAgari(h.keika)) flags.push('ハイペース末脚');
+  if (h.weight >= 500 && ['先行','好位差し'].includes(kyakushitsu)) flags.push('大型馬×先行脚質');
+
+  if (h.memo && (h.memo.includes('落馬') || h.memo.includes('妨害') || h.memo.includes('出遅れ') ||
+      h.memo.includes('包まれ') || h.memo.includes('競走中止') || h.memo.includes('不利'))) {
+    flags.push('前走不利あり');
+  }
+
+  // 条件6: ステップ良好（コース・距離経験あり）
+  if (['win','placed'].includes(courseExp) && ['win','placed'].includes(distExp)) {
+    flags.push('コース×距離実績');
+  }
+
+  // 条件7: 上昇馬フラグ
+  // 重賞（G1〜G3・JP）に一度でも出走していたらつけない
+  const hasGradedExp = (h.keika || []).some(k =>
+    ['G1','G2','G3','JP'].includes(k.grade)
+  );
+  if (!hasGradedExp) {
+    const lowerRentai = (h.keika || []).filter(k =>
+      k.rank <= 2 && ['L','OP','3勝','2勝','1勝'].includes(k.grade)
+    );
+    if (lowerRentai.length >= 3) flags.push('上昇馬（下級連対3回以上）');
+  }
+
+  scores.ana = Math.min(flags.length * 2, 10);
+
+  // --- 休み明け補正 ---
+  let restPenalty = 0;
+  if (h.rest === 'long') restPenalty = -2;
+
+  const totalScore = scores.course + scores.dist + scores.blood + scores.kyakushitsu + scores.jusho + scores.ana + restPenalty;
+
+  return {
+    ...h,
+    kyakushitsu,
+    scores,
+    flags,
+    totalScore: Math.max(0, totalScore),
+    restPenalty,
+    rank: 0, // will be set after sort
+  };
+}
+
+function calcBloodScore(sire, course, race) {
+  const dist = race.distance;
+  const type = course.type;
+  const slope = course.slope;
+
+  const table = {
+    hearts:   { wide: 3, mid: 4, small: 4, slopeMod: 1, longMod: 1 },
+    roberto:  { wide: 2, mid: 3, small: 5, slopeMod: 2, longMod: 0 },
+    deep:     { wide: 5, mid: 3, small: 2, slopeMod: 0, longMod: 0 },
+    kizna:    { wide: 4, mid: 4, small: 3, slopeMod: 0, longMod: 0 },
+    roadkana: { wide: 3, mid: 3, small: 3, slopeMod: 1, longMod: -1 },
+    kitasan:  { wide: 3, mid: 4, small: 3, slopeMod: 1, longMod: 2 },
+    other:    { wide: 3, mid: 3, small: 3, slopeMod: 0, longMod: 0 },
+  };
+
+  if (!sire || !table[sire]) return 2;
+  let s = table[sire][type] || 2;
+  if (slope && table[sire].slopeMod) s += table[sire].slopeMod;
+  if (dist >= 2400 && table[sire].longMod) s += table[sire].longMod;
+  return Math.min(Math.max(s, 0), 7);
+}
+
+function calcKyakushitsu(keika, totalTosu) {
+  if (!keika || !keika.length) return '不明';
+  const latest = keika.slice(0, 3);
+  let sumPos = 0; let count = 0;
+
+  latest.forEach(k => {
+    const tosu = parseInt(k.tosu) || 16;
+
+    // 入力されているコーナー順位を全部集める（後ろ優先で平均）
+    const corners = [k.c4, k.c3, k.c2, k.c1]
+      .map(c => (c && c !== '—' && c !== '') ? parseInt(c) : NaN)
+      .filter(n => !isNaN(n) && n > 0);
+
+    if (corners.length === 0) return;
+
+    // 後半コーナー（4C→3C）を優先、なければ前半も使う
+    // 一番後ろのコーナー（最終コーナーに近い方）を代表値にする
+    const rep = corners[0]; // 後ろから並べてるので[0]が最終コーナーに近い
+    sumPos += rep / tosu;
+    count++;
+  });
+
+  if (!count) return '不明';
+  const avg = sumPos / count;
+
+  if (avg <= 0.12) return '逃げ';
+  if (avg <= 0.28) return '先行';
+  if (avg <= 0.50) return '好位差し';
+  if (avg <= 0.72) return '差し';
+  return '追込';
+}
+
+function calcKyakushitsuScore(kyakushitsu, course, race) {
+  const straight = course.straight;
+  const isSmall = course.type === 'small';
+  const pace = race.nigemas >= 3 ? 'high' : race.nigemas === 0 ? 'slow' : 'mid';
+
+  const scoreMap = {
+    逃げ:    { slow: 5, mid: 4, high: 2 },
+    先行:    { slow: 5, mid: 4, high: 3 },
+    好位差し:{ slow: 4, mid: 4, high: 4 },
+    差し:    { slow: 2, mid: 3, high: 4 },
+    追込:    { slow: 1, mid: 2, high: 3 },
+    不明:    { slow: 2, mid: 2, high: 2 },
+  };
+
+  let score = scoreMap[kyakushitsu]?.[pace] || 2;
+
+  // 直線補正
+  if (straight <= 320 && ['差し','追込'].includes(kyakushitsu)) score -= 2;
+  if (straight >= 500 && ['差し','追込'].includes(kyakushitsu)) score += 1;
+  if (isSmall && ['差し','追込'].includes(kyakushitsu)) score -= 1;
+
+  return Math.min(Math.max(score, 0), 5);
+}
+
+function hasCornerPushup(keika) {
+  if (!keika) return false;
+  return keika.some(k => {
+    const c3 = parseInt(k.c3), c4 = parseInt(k.c4);
+    if (isNaN(c3)||isNaN(c4)||c3===0||c4===0) return false;
+    return c4 < c3 && (c3 - c4) >= 2;
+  });
+}
+
+function hasHighPaceGoodAgari(keika) {
+  if (!keika) return false;
+  return keika.some(k => {
+    if (k.pace !== 'high') return false;
+    if (k.agari == null) return false;
+    return k.agari <= 34.5 || (k.agariAll != null && k.agariAll > 0 && k.agari <= k.agariAll - 0.5);
+  });
+}
+
+// ===== RENDER RESULT =====
+function renderResult(analyzed, race, course) {
+  const grade = race.grade || '';
+  const courseName = course.name || '';
+
+  const html = `
+    <div class="section">
+      <div class="section-title">🏟 ${race.name}</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.8;">
+        ${courseName} ${race.distance}m ${race.surface==='turf'?'芝':'ダート'} | ${grade}<br>
+        馬場：${{good:'良',yayashige:'稍重',heavy:'重',furyou:'不良'}[race.baba]} ${race.cushion?'クッション '+race.cushion:''}
+        | 直線 ${course.straight}m ${course.slope?'急坂あり':''}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🏆 総合ランキング</div>
+      ${analyzed.map((h, i) => {
+        const wc = WAKU_COLORS[h.waku] || ['#888','#fff'];
+        const posColor = i===0?'var(--gold)':i===1?'var(--silver)':i===2?'var(--bronze)':'var(--text3)';
+        const maxScore = 32;
+        const pct = Math.round((h.totalScore/maxScore)*100);
+
+        return `
+        <div class="ranking-item" style="${i===0?'border-color:rgba(255,215,0,0.4);background:linear-gradient(135deg,var(--surface2),rgba(255,215,0,0.05));':''}">
+          <div class="ranking-pos" style="color:${posColor}">${i+1}</div>
+          <div style="width:24px;height:24px;border-radius:5px;background:${wc[0]};color:${wc[1]};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;flex-shrink:0;">${h.waku}</div>
+          <div class="ranking-info">
+            <div class="ranking-name">${h.umaban?h.umaban+'番 ':''}${h.name}</div>
+            <div class="ranking-meta">${h.kyakushitsu} | ${(h.sex||'')}${h.age}歳 | ${h.jockey||'—'} | ${h.weight?h.weight+'kg':'—'}</div>
+            ${h.flags.length ? `<div class="ana-flags" style="margin-top:4px;">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div class="ranking-score">${h.totalScore}</div>
+            <div style="font-size:10px;color:var(--text3);">${pct}%</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="section">
+      <div class="section-title">📋 各馬スコア詳細</div>
+      ${analyzed.map(h => renderHorseDetail(h)).join('')}
+    </div>
+  `;
+
+  document.getElementById('result-content').innerHTML = html;
+}
+
+function renderHorseDetail(h) {
+  const wc = WAKU_COLORS[h.waku] || ['#888','#fff'];
+  const isAna = h.flags.length >= 2;
+
+  const scoreItems = [
+    { label: 'コース適性', val: h.scores.course, max: 5, color: '#5299e0' },
+    { label: '距離適性',   val: h.scores.dist,   max: 5, color: '#52c97a' },
+    { label: '血統適性',   val: h.scores.blood,  max: 7, color: '#9b72cf' },
+    { label: '脚質×展開', val: h.scores.kyakushitsu, max: 5, color: '#e08050' },
+    { label: '重賞実績',   val: h.scores.jusho,  max: 5, color: '#c9a84c' },
+    { label: '穴馬指数',   val: h.scores.ana,    max: 10, color: '#ffd700' },
+  ];
+
+  return `
+    <div class="horse-card ${isAna?'has-flag':''}">
+      <div class="horse-header">
+        <div class="waku-badge" style="background:${wc[0]};color:${wc[1]};">${h.waku}</div>
+        <div style="flex:1;">
+          <div class="horse-name-big">${h.umaban?h.umaban+'番 ':''}${h.name}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">${(h.sex||'')}${h.age}歳 ${h.jockey||''} ${h.weight?h.weight+'kg':''}</div>
+        </div>
+        <div class="badges">
+          <span class="badge badge-kyakushitsu">${h.kyakushitsu}</span>
+          ${isAna?'<span class="badge badge-ana">⭐穴</span>':''}
+          <span class="badge ${h.totalScore>=20?'badge-score-high':h.totalScore>=12?'badge-score-mid':'badge-score-low'}">${h.totalScore}pt</span>
+        </div>
+      </div>
+
+      ${scoreItems.map(s => `
+        <div class="score-row">
+          <div class="score-label">${s.label}</div>
+          <div class="score-bar-bg">
+            <div class="score-bar-fill" style="width:${(s.val/s.max)*100}%;background:${s.color};"></div>
+          </div>
+          <div class="score-val" style="color:${s.color}">${s.val}</div>
+        </div>`).join('')}
+
+      ${h.flags.length ? `<div class="ana-flags">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>` : ''}
+      ${h.memo ? `<div style="margin-top:8px;font-size:11px;color:var(--accent);background:rgba(201,168,76,0.08);border-radius:6px;padding:6px 10px;">📝 ${h.memo}</div>` : ''}
+      ${h.restPenalty < 0 ? `<div style="margin-top:6px;font-size:10px;color:var(--red);">⚠️ 休み明け補正 ${h.restPenalty}pt</div>` : ''}
+
+      ${h.keika && h.keika.length ? `
+        <div style="margin-top:10px;">
+          <div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;margin-bottom:4px;">PAST RACES</div>
+          <table class="keika-table">
+            <thead><tr><th>#</th><th>レース名</th><th>場/距</th><th>G</th><th>着/頭</th><th>1C</th><th>2C</th><th>3C</th><th>4C</th><th>上り</th><th>P</th></tr></thead>
+            <tbody>
+              ${h.keika.map((k,i)=>{
+                const ci = COURSE_DATA[k.pastCourse];
+                const courseLabel = ci ? ci.name : (k.pastCourse||'—');
+                const distLabel = k.pastDist ? k.pastDist+'m' : '—';
+                const babaLabel = {good:'良',yayashige:'稍',heavy:'重',furyou:'不'}[k.pastBaba] || '—';
+                return `
+                <tr>
+                  <td style="color:var(--text3)">${i+1}</td>
+                  <td style="color:var(--text2);font-size:10px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${k.raceName||''}">${k.raceName||'—'}</td>
+                  <td style="font-size:10px;color:var(--text3);white-space:nowrap;">${courseLabel}<br>${distLabel}${babaLabel!=='—'?'·'+babaLabel:''}</td>
+                  <td><span class="badge badge-rank" style="font-size:9px;padding:1px 5px;">${k.grade||'—'}</span></td>
+                  <td><span class="rank-circle ${k.rank<=3?'rank-'+k.rank:'rank-other'}">${k.rank}</span><span style="color:var(--text3);font-size:9px;">/${k.tosu}</span></td>
+                  <td>${k.c1||'—'}</td><td>${k.c2||'—'}</td><td>${k.c3||'—'}</td><td>${k.c4||'—'}</td>
+                  <td>${k.agari!=null?k.agari+'s':'—'}</td>
+                  <td style="color:${k.pace==='high'?'var(--red)':k.pace==='slow'?'var(--green)':k.pace==='unknown'?'var(--text3)':'var(--accent)'}">${k.pace==='high'?'H':k.pace==='slow'?'S':k.pace==='unknown'?'？':'M'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>` : ''}
+    </div>`;
+}
+
+// ===== RENDER TENKAI =====
+function renderTenkai(analyzed, race, course) {
+  const pace = race.nigemas >= 3 ? 'ハイペース' : race.nigemas === 0 ? 'スローペース' : race.nigemas === 1 ? 'ミドル〜スロー' : 'ミドル';
+  const paceColor = race.nigemas >= 3 ? 'var(--red)' : race.nigemas === 0 ? 'var(--green)' : 'var(--accent)';
+
+  const nigeme = analyzed.filter(h => h.kyakushitsu === '逃げ');
+  const senko = analyzed.filter(h => h.kyakushitsu === '先行');
+  const sashi = analyzed.filter(h => ['好位差し','差し'].includes(h.kyakushitsu));
+  const oikomi = analyzed.filter(h => h.kyakushitsu === '追込');
+  const fumeimei = analyzed.filter(h => h.kyakushitsu === '不明');
+
+  const advantaged = race.nigemas >= 3
+    ? ['好位差し','差し']
+    : (course.type === 'small' ? ['逃げ','先行'] : ['先行','好位差し']);
+
+  const courseName = course.name || '';
+
+  const html = `
+    <div class="section">
+      <div class="section-title">🌀 展開予想</div>
+      <div class="flow-row">
+        <span style="color:var(--text3);font-size:11px;">逃げ馬</span>
+        <span class="flow-chip" style="background:rgba(224,82,82,0.2);color:#f08080;">${race.nigemas}頭</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-chip" style="background:rgba(201,168,76,0.2);color:var(--accent2);font-size:13px;font-weight:900;">${pace}</span>
+        <span class="flow-arrow">→</span>
+        <span style="font-size:11px;color:var(--green);">有利：${advantaged.join('・')}</span>
+      </div>
+
+      <div style="margin-top:10px;font-size:11px;color:var(--text2);line-height:1.8;">
+        📍 ${courseName}（直線 ${course.straight}m ${course.slope?'/ 急坂あり':''}）<br>
+        ${course.type==='small'?'⚠️ 小回りコース。直線短く差し・追込は不利。':
+          course.type==='wide'?'✅ 直線長い。末脚型にもチャンスあり。':
+          '📋 中距離コース。バランス型が有利。'}
+        ${race.kaibaku <= 2 ? '<br>🟢 開幕直後 → 内枠・先行が有利になりやすい。' :
+          race.kaibaku >= 9 ? '<br>🟡 馬場荒れ気味 → パワー型・外枠有利になることも。' : ''}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🐴 脚質別グループ</div>
+
+      ${[
+        { label: '逃げ', list: nigeme, color: '#e05252', bg: 'rgba(224,82,82,0.1)' },
+        { label: '先行', list: senko, color: '#c9a84c', bg: 'rgba(201,168,76,0.1)' },
+        { label: '好位差し・差し', list: sashi, color: '#5299e0', bg: 'rgba(82,153,224,0.1)' },
+        { label: '追込', list: oikomi, color: '#9b72cf', bg: 'rgba(155,114,207,0.1)' },
+        { label: '脚質不明', list: fumeimei, color: 'var(--text3)', bg: 'rgba(90,90,114,0.1)' },
+      ].filter(g => g.list.length).map(g => `
+        <div style="background:${g.bg};border:1px solid ${g.color}33;border-radius:8px;padding:10px;margin-bottom:8px;">
+          <div style="font-size:10px;color:${g.color};font-weight:700;letter-spacing:1px;margin-bottom:6px;">${g.label}</div>
+          ${g.list.map(h=>`
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="font-size:12px;font-weight:700;">${h.umaban?h.umaban+'番 ':''}${h.name}</span>
+              ${h.flags.length>=2?'<span class="badge badge-ana" style="font-size:9px;">⭐穴</span>':''}
+              <span style="font-size:10px;color:var(--text3);margin-left:auto;">${h.totalScore}pt</span>
+            </div>`).join('')}
+        </div>`).join('')}
+    </div>
+
+    <div class="section">
+      <div class="section-title">⭐ 穴馬候補</div>
+      ${analyzed.filter(h=>h.flags.length>=2).length ?
+        analyzed.filter(h=>h.flags.length>=2).map(h=>`
+          <div style="background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.25);border-radius:8px;padding:12px;margin-bottom:8px;">
+            <div style="font-weight:700;font-size:14px;margin-bottom:6px;">
+              ${h.umaban?h.umaban+'番 ':''}${h.name}
+              <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px;">${h.kyakushitsu} | ${h.totalScore}pt</span>
+            </div>
+            <div class="ana-flags">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>
+            ${h.memo?`<div style="margin-top:6px;font-size:11px;color:var(--accent);">📝 ${h.memo}</div>`:''}
+          </div>`).join('')
+        : '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">条件を満たす穴馬候補は今のところいないわ</div>'}
+    </div>
+  `;
+
+  document.getElementById('tenkai-content').innerHTML = html;
+}
+
+// ===== SAVE / LOAD =====
+function saveRace() {
+  const key = 'keiba_' + Date.now();
+  const now = new Date();
+  const savedAt = now.toLocaleDateString('ja-JP') + ' ' +
+    String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0');
+  const data = {
+    key,
+    savedAt,
+    raceName: document.getElementById('race-name').value || '無名レース',
+    course: document.getElementById('race-course').value,
+    distance: document.getElementById('race-distance').value,
+    grade: document.getElementById('race-grade').value,
+    horses: JSON.parse(JSON.stringify(horses)),
+    raceForm: {
+      surface: document.getElementById('race-surface').value,
+      baba: document.getElementById('race-baba').value,
+      cushion: document.getElementById('race-cushion').value,
+      kaibaku: document.getElementById('race-kaibaku').value,
+      nigemas: document.getElementById('race-nigemas').value,
+      tosu: document.getElementById('race-tosu').value,
+    }
+  };
+
+  const saved = getSaved();
+  saved.push(data);
+  localStorage.setItem('keiba_saved', JSON.stringify(saved));
+  showToast('保存したわ！💾');
+  renderSaved();
+}
+
+function getSaved() {
+  try { return JSON.parse(localStorage.getItem('keiba_saved')) || []; }
+  catch(e) { return []; }
+}
+
+function renderSaved() {
+  const container = document.getElementById('saved-list');
+  const saved = getSaved();
+  if (!saved.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💾</div><div class="empty-state-text">まだ保存したレースがないわ</div></div>';
+    return;
+  }
+
+  // 新しい順に並び替え
+  const sorted = [...saved].map((s,i) => ({...s, _origIdx: i})).reverse();
+
+  container.innerHTML = sorted.map((s) => {
+    const i = s._origIdx;
+    return `
+    <div class="saved-race-item">
+      <div class="saved-race-info">
+        <div class="saved-race-name">${s.raceName}</div>
+        <div class="saved-race-meta">${COURSE_DATA[s.course]?.name||s.course||'—'} ${s.distance||'—'}m ${s.grade||''} | ${s.horses.length}頭</div>
+        <div style="font-size:10px;color:var(--accent);margin-top:2px;">💾 ${s.savedAt}</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" onclick="loadRace(${i})">読込</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSaved(${i})">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function loadRace(i) {
+  const saved = getSaved();
+  const s = saved[i];
+  if (!s) return;
+
+  document.getElementById('race-name').value = s.raceName || '';
+  document.getElementById('race-course').value = s.course || '';
+  document.getElementById('race-distance').value = s.distance || '';
+  document.getElementById('race-grade').value = s.grade || '';
+  if (s.raceForm) {
+    document.getElementById('race-surface').value = s.raceForm.surface || 'turf';
+    document.getElementById('race-baba').value = s.raceForm.baba || 'good';
+    document.getElementById('race-cushion').value = s.raceForm.cushion || '';
+    document.getElementById('race-kaibaku').value = s.raceForm.kaibaku || '5';
+    document.getElementById('race-nigemas').value = s.raceForm.nigemas || '1';
+    document.getElementById('race-tosu').value = s.raceForm.tosu || '16';
+  }
+  horses = s.horses || [];
+  renderHorseList();
+  switchTab('input');
+  showToast(`「${s.raceName}」を読み込んだわ！`);
+}
+
+function deleteSaved(i) {
+  const saved = getSaved();
+  saved.splice(i, 1);
+  localStorage.setItem('keiba_saved', JSON.stringify(saved));
+  renderSaved();
+  showToast('削除したわ');
+}
+
+function clearAll() {
+  if (!confirm('保存済みレースを全部消すわよ？')) return;
+  localStorage.removeItem('keiba_saved');
+  renderSaved();
+  showToast('全削除したわ');
+}
+
+// ===== JSON EXPORT =====
+function exportJSON() {
+  const saved = getSaved();
+  if (!saved.length) {
+    showToast('保存済みレースがないわ！先に保存してね');
+    return;
+  }
+  const exportData = {
+    app: 'Nami競馬予想システム',
+    exportedAt: new Date().toLocaleString('ja-JP'),
+    version: '1.0',
+    races: saved
+  };
+  const json = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url;
+  a.download = `keiba_yoso_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${saved.length}件のレースを書き出したわ！💾`);
+}
+
+// ===== JSON IMPORT =====
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const resultEl = document.getElementById('import-result');
+  resultEl.textContent = '読み込み中...';
+  resultEl.style.color = 'var(--text3)';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // バリデーション
+      if (!data.races || !Array.isArray(data.races)) {
+        throw new Error('形式が違うわ。このアプリで書き出したファイルを使ってね');
+      }
+
+      const existing = getSaved();
+      // 重複チェック（keyで判定）
+      const existingKeys = new Set(existing.map(r => r.key));
+      const newRaces = data.races.filter(r => !existingKeys.has(r.key));
+      const dupCount = data.races.length - newRaces.length;
+
+      const merged = [...existing, ...newRaces];
+      localStorage.setItem('keiba_saved', JSON.stringify(merged));
+
+      renderSaved();
+
+      let msg = `✅ ${newRaces.length}件を読み込んだわ！`;
+      if (dupCount > 0) msg += `（重複${dupCount}件はスキップ）`;
+      resultEl.textContent = msg;
+      resultEl.style.color = 'var(--green)';
+      showToast(`${newRaces.length}件追加したわ！`);
+    } catch(err) {
+      resultEl.textContent = `❌ エラー：${err.message}`;
+      resultEl.style.color = 'var(--red)';
+    }
+    // input リセット（同じファイルを再度読めるように）
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+</script>
+</body>
+</html>
