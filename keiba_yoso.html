@@ -787,7 +787,8 @@
     <div class="form-grid mt8">
       <div class="form-group">
         <label>騎手</label>
-        <input type="text" id="h-jockey" placeholder="例：川田将雅">
+        <input type="text" id="h-jockey" placeholder="例：川田将雅" list="jockey-datalist" oninput="refreshJockeyList()">
+        <datalist id="jockey-datalist"></datalist>
       </div>
       <div class="form-group">
         <label>馬体重 (kg)</label>
@@ -1003,7 +1004,68 @@ function getNumericInput(id) {
   return n;
 }
 
-// ===== 自動判別関数 =====
+// ===== 加点テーブル（距離適性・重賞実績共通） =====
+const KAITEN_TABLE = {
+  G1:  { 1: 15, 2: 12, 3: 10 },
+  G2:  { 1: 10, 2:  8, 3:  6 },
+  G3:  { 1:  7, 2:  5, 3:  3 },
+  JP:  { 1:  7, 2:  5, 3:  3 },
+  L:   { 1:  4, 2:  2, 3:  1 },
+  OP:  { 1:  4, 2:  2, 3:  1 },
+  '3勝':{ 1: 2, 2:  1, 3:  0 },
+  '2勝':{ 1: 2, 2:  1, 3:  0 },
+  '1勝':{ 1: 2, 2:  1, 3:  0 },
+};
+
+function calcDistScore(keika, targetDist) {
+  if (!targetDist) return 0;
+  const td = parseInt(targetDist);
+  let score = 0;
+  (keika || []).forEach(k => {
+    if (!k.pastDist || parseInt(k.pastDist) !== td) return;
+    const pts = KAITEN_TABLE[k.grade];
+    if (pts && k.rank >= 1 && k.rank <= 3) score += (pts[k.rank] || 0);
+  });
+  return score;
+}
+
+function calcJushoScore(keika) {
+  let score = 0;
+  (keika || []).forEach(k => {
+    const pts = KAITEN_TABLE[k.grade];
+    if (pts && k.rank >= 1 && k.rank <= 3) score += (pts[k.rank] || 0);
+  });
+  return score;
+}
+
+// Rtスコア（過去走の最高Rtで判定）
+function calcRtScore(keika) {
+  const rts = (keika || []).map(k => k.rt).filter(r => r != null && r > 0);
+  if (!rts.length) return 0;
+  const maxRt = Math.max(...rts);
+  if (maxRt >= 120) return 5;
+  if (maxRt >= 115) return 4;
+  if (maxRt >= 110) return 3;
+  if (maxRt >= 105) return 2;
+  return 1;
+}
+
+// 上がりタイム⚡判定（全体上がりより速い走）
+function getAgariFlashCount(keika) {
+  return (keika || []).filter(k => {
+    if (k.agari == null || k.agariAll == null) return false;
+    return k.agari < k.agariAll - 0.5; // 全体より0.5秒以上速い
+  }).length;
+}
+
+// 騎手datalist更新
+function refreshJockeyList() {
+  const list = document.getElementById('jockey-datalist');
+  if (!list) return;
+  const names = new Set();
+  horses.forEach(h => { if (h.jockey) names.add(h.jockey); });
+  list.innerHTML = [...names].map(n => `<option value="${n}">`).join('');
+}
 function autoDetectJusho(manualVal, keika) {
   if (manualVal !== 'auto') return manualVal;
   // 連対（1・2着）
@@ -1214,11 +1276,22 @@ function addKeikaRow(data) {
     <div class="form-grid" style="margin-top:8px;gap:6px;">
       <div class="form-group">
         <label>上がり3F（秒）</label>
-        <input type="number" id="k${idx}-agari" placeholder="例：34.2" step="0.1" min="30" max="45" value="${data&&data.agari||''}">
+        <input type="number" id="k${idx}-agari" placeholder="例：34.2" step="0.1" min="30" max="45" value="${data&&data.agari!=null?data.agari:''}">
       </div>
       <div class="form-group">
         <label>全体上がり3F <span style="color:var(--accent);font-size:9px;">※共有</span></label>
-        <input type="number" id="k${idx}-agari-all" placeholder="例：35.5" step="0.1" min="30" max="45" value="${data&&data.agariAll||''}">
+        <input type="number" id="k${idx}-agari-all" placeholder="例：35.5" step="0.1" min="30" max="45" value="${data&&data.agariAll!=null?data.agariAll:''}">
+      </div>
+      <div class="form-group">
+        <label>Rt（レーティング）</label>
+        <input type="number" id="k${idx}-rt" placeholder="例：112" step="1" min="50" max="140" value="${data&&data.rt!=null?data.rt:''}">
+      </div>
+      <div class="form-group">
+        <label>馬番</label>
+        <select id="k${idx}-umaban" style="padding:6px 8px;font-size:12px;">
+          <option value="">—</option>
+          ${Array.from({length:18},(_,i)=>i+1).map(n=>`<option value="${n}"${data&&data.pastUmaban==n?' selected':''}>${n}番</option>`).join('')}
+        </select>
       </div>
     </div>
   `;
@@ -1263,6 +1336,8 @@ function collectKeikaRows() {
       c4: toCorner(sels[3]?.value),
       agari:    getNumericInput('k'+i+'-agari'),
       agariAll: getNumericInput('k'+i+'-agari-all'),
+      rt:       getNumericInput('k'+i+'-rt'),
+      pastUmaban: parseInt(document.getElementById('k'+i+'-umaban')?.value) || null,
     });
   }
   return rows;
@@ -1376,21 +1451,16 @@ function analyzeAll() {
 
 // ===== HORSE ANALYSIS =====
 function analyzeHorse(h, race, course) {
-  let scores = { course: 0, dist: 0, blood: 0, kyakushitsu: 0, ana: 0 };
+  let scores = { course: 0, dist: 0, blood: 0, kyakushitsu: 0, jusho: 0, rt: 0, ana: 0 };
   let flags = [];
 
-  // 毎回過去走データから強制再計算（保存値は完全に無視）
+  // --- 1. コース適性（既存ロジック維持） ---
   const courseExp = autoDetectCourseExp('auto', h.keika, race.course);
-  const distExp   = autoDetectDistExp('auto', h.keika, race.distance);
-  const jushoRenh = autoDetectJusho('auto', h.keika);
+  const courseScoreMap = { win: 5, placed: 4, ran: 2, similar: 1, none: 0 };
+  scores.course = courseScoreMap[courseExp] || 0;
 
-  // --- 1. コース適性 ---
-  const courseScore = { win: 5, placed: 4, ran: 2, similar: 1, none: 0 };
-  scores.course = courseScore[courseExp] || 0;
-
-  // --- 2. 距離適性 ---
-  const distScore = { win: 5, placed: 4, ran: 2, longer: 3, none: 0 };
-  scores.dist = distScore[distExp] || 0;
+  // --- 2. 距離適性（加点式・青天井） ---
+  scores.dist = calcDistScore(h.keika, race.distance);
 
   // --- 3. 血統適性 ---
   scores.blood = calcBloodScore(h.sire, course, race);
@@ -1401,11 +1471,15 @@ function analyzeHorse(h, race, course) {
   // --- 5. 脚質×コース適合 ---
   scores.kyakushitsu = calcKyakushitsuScore(kyakushitsu, course, race);
 
-  // --- 6. 重賞連対 ---
-  const jushoScore = { g1: 5, g23: 4, op: 2, g1_3rd: 3, g23_3rd: 2, op_3rd: 1, none: 0 };
-  scores.jusho = jushoScore[jushoRenh] || 0;
+  // --- 6. 重賞実績（加点式・青天井） ---
+  scores.jusho = calcJushoScore(h.keika);
 
-  // --- 7. 穴馬フラグ ---
+  // --- 7. Rtスコア ---
+  scores.rt = calcRtScore(h.keika);
+
+  // --- 8. 穴馬フラグ ---
+  // 重賞実績フラグ（既存）
+  const jushoRenh = autoDetectJusho('auto', h.keika);
   if (jushoRenh === 'g1') flags.push('G1連対あり');
   else if (jushoRenh === 'g23') flags.push('重賞連対あり');
   else if (jushoRenh === 'g1_3rd') flags.push('G1・3着実績');
@@ -1422,21 +1496,28 @@ function analyzeHorse(h, race, course) {
     flags.push('前走不利あり');
   }
 
-  // 条件6: ステップ良好（コース・距離経験あり）
-  if (['win','placed'].includes(courseExp) && ['win','placed'].includes(distExp)) {
+  if (['win','placed'].includes(courseExp) && scores.dist >= 5) {
     flags.push('コース×距離実績');
   }
 
-  // 条件7: 上昇馬フラグ
-  // 重賞（G1〜G3・JP）に一度でも出走していたらつけない
-  const hasGradedExp = (h.keika || []).some(k =>
-    ['G1','G2','G3','JP'].includes(k.grade)
-  );
+  // 上昇馬フラグ
+  const hasGradedExp = (h.keika || []).some(k => ['G1','G2','G3','JP'].includes(k.grade));
   if (!hasGradedExp) {
     const lowerRentai = (h.keika || []).filter(k =>
       k.rank <= 2 && ['L','OP','3勝','2勝','1勝'].includes(k.grade)
     );
     if (lowerRentai.length >= 3) flags.push('上昇馬（下級連対3回以上）');
+  }
+
+  // 末脚型フラグ（⚡が3回以上）
+  const flashCount = getAgariFlashCount(h.keika);
+  if (flashCount >= 3) flags.push('末脚型（上がり最速級3回以上）');
+
+  // 高Rt穴馬フラグ（Rt110以上なのに着外が過半数）
+  const highRtRaces = (h.keika || []).filter(k => k.rt != null && k.rt >= 110);
+  const highRtOut = highRtRaces.filter(k => k.rank > 3);
+  if (highRtRaces.length >= 2 && highRtOut.length >= highRtRaces.length / 2) {
+    flags.push('高Rt×着外（能力秘めた穴馬）');
   }
 
   scores.ana = Math.min(flags.length * 2, 10);
@@ -1445,7 +1526,7 @@ function analyzeHorse(h, race, course) {
   let restPenalty = 0;
   if (h.rest === 'long') restPenalty = -2;
 
-  const totalScore = scores.course + scores.dist + scores.blood + scores.kyakushitsu + scores.jusho + scores.ana + restPenalty;
+  const totalScore = scores.course + scores.dist + scores.blood + scores.kyakushitsu + scores.jusho + scores.rt + scores.ana + restPenalty;
 
   return {
     ...h,
@@ -1607,13 +1688,17 @@ function renderHorseDetail(h) {
   const wc = WAKU_COLORS[h.waku] || ['#888','#fff'];
   const isAna = h.flags.length >= 2;
 
+  const maxDist  = Math.max(h.scores.dist, 15);
+  const maxJusho = Math.max(h.scores.jusho, 15);
+
   const scoreItems = [
-    { label: 'コース適性', val: h.scores.course, max: 5, color: '#5299e0' },
-    { label: '距離適性',   val: h.scores.dist,   max: 5, color: '#52c97a' },
-    { label: '血統適性',   val: h.scores.blood,  max: 7, color: '#9b72cf' },
-    { label: '脚質×展開', val: h.scores.kyakushitsu, max: 5, color: '#e08050' },
-    { label: '重賞実績',   val: h.scores.jusho,  max: 5, color: '#c9a84c' },
-    { label: '穴馬指数',   val: h.scores.ana,    max: 10, color: '#ffd700' },
+    { label: 'コース適性', val: h.scores.course, max: 5,        color: '#5299e0' },
+    { label: '距離適性',   val: h.scores.dist,   max: maxDist,  color: '#52c97a' },
+    { label: '血統適性',   val: h.scores.blood,  max: 7,        color: '#9b72cf' },
+    { label: '脚質×展開', val: h.scores.kyakushitsu, max: 5,   color: '#e08050' },
+    { label: '重賞実績',   val: h.scores.jusho,  max: maxJusho, color: '#c9a84c' },
+    { label: 'Rtスコア',   val: h.scores.rt,     max: 5,        color: '#e05252' },
+    { label: '穴馬指数',   val: h.scores.ana,    max: 10,       color: '#ffd700' },
   ];
 
   return `
@@ -1648,13 +1733,18 @@ function renderHorseDetail(h) {
         <div style="margin-top:10px;">
           <div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;margin-bottom:4px;">PAST RACES</div>
           <table class="keika-table">
-            <thead><tr><th>#</th><th>レース名</th><th>場/距</th><th>G</th><th>着/頭</th><th>1C</th><th>2C</th><th>3C</th><th>4C</th><th>上り</th><th>P</th></tr></thead>
+            <thead><tr><th>#</th><th>レース名</th><th>場/距</th><th>G</th><th>着/頭</th><th>1C</th><th>2C</th><th>3C</th><th>4C</th><th>上り</th><th>Rt</th><th>P</th></tr></thead>
             <tbody>
               ${h.keika.map((k,i)=>{
                 const ci = COURSE_DATA[k.pastCourse];
                 const courseLabel = ci ? ci.name : (k.pastCourse||'—');
                 const distLabel = k.pastDist ? k.pastDist+'m' : '—';
                 const babaLabel = {good:'良',yayashige:'稍',heavy:'重',furyou:'不'}[k.pastBaba] || '—';
+                const isFlash = k.agari != null && k.agariAll != null && k.agari < k.agariAll - 0.5;
+                const agariDisplay = k.agari != null
+                  ? `${isFlash?'<span style="color:#ffd700;font-weight:700;">⚡</span>':''}${k.agari}s`
+                  : '—';
+                const rtLabel = k.rt != null ? k.rt : '—';
                 return `
                 <tr>
                   <td style="color:var(--text3)">${i+1}</td>
@@ -1663,7 +1753,8 @@ function renderHorseDetail(h) {
                   <td><span class="badge badge-rank" style="font-size:9px;padding:1px 5px;">${k.grade||'—'}</span></td>
                   <td><span class="rank-circle ${k.rank<=3?'rank-'+k.rank:'rank-other'}">${k.rank}</span><span style="color:var(--text3);font-size:9px;">/${k.tosu}</span></td>
                   <td>${k.c1||'—'}</td><td>${k.c2||'—'}</td><td>${k.c3||'—'}</td><td>${k.c4||'—'}</td>
-                  <td>${k.agari!=null?k.agari+'s':'—'}</td>
+                  <td>${agariDisplay}</td>
+                  <td style="color:${k.rt>=115?'var(--gold)':k.rt>=110?'var(--accent2)':'var(--text3)'};font-size:10px;font-weight:${k.rt>=110?'700':'400'};">${rtLabel}</td>
                   <td style="color:${k.pace==='high'?'var(--red)':k.pace==='slow'?'var(--green)':k.pace==='unknown'?'var(--text3)':'var(--accent)'}">${k.pace==='high'?'H':k.pace==='slow'?'S':k.pace==='unknown'?'？':'M'}</td>
                 </tr>`;
               }).join('')}
