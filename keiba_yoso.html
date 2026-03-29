@@ -661,19 +661,17 @@
         <label>出走頭数</label>
         <input type="number" id="race-tosu" placeholder="例：16" min="3" max="18" value="16">
       </div>
+      <div class="form-group">
+        <label>レース日</label>
+        <input type="date" id="race-date">
+      </div>
     </div>
   </div>
 
   <!-- 出走馬追加 -->
   <div class="section">
     <div class="section-title">🐴 出走馬データ</div>
-    <button class="btn btn-primary" onclick="openHorseModal()">＋ 出走馬を追加</button>
-    <div id="horse-list" class="mt12">
-      <div class="empty-state">
-        <div class="empty-state-icon">🐴</div>
-        <div class="empty-state-text">まだ出走馬が登録されていないわ</div>
-      </div>
-    </div>
+    <div id="horse-slots"></div>
   </div>
 
   <button class="btn btn-primary" onclick="analyzeAll()" style="margin-bottom:16px">
@@ -723,6 +721,32 @@
     </div>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
     <div id="import-result" style="margin-top:10px;font-size:11px;"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🐴 馬データベース</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.8;">
+      馬データを独立して保存・管理できるわ。次のレースでも同じ馬を読み込んで使えるわよ✨
+    </div>
+    <div class="flex-gap">
+      <button class="btn btn-primary" onclick="exportHorseDB()" style="flex:1">📤 馬データ書き出し</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('import-horse-file').click()" style="flex:1">📥 馬データ読み込み</button>
+    </div>
+    <input type="file" id="import-horse-file" accept=".json" style="display:none" onchange="importHorseDB(event)">
+    <div id="horsedb-result" style="margin-top:10px;font-size:11px;"></div>
+    <div id="horsedb-list" class="mt12"></div>
+  </div>
+</div>
+
+<!-- ==================== DB SELECT MODAL ==================== -->
+<div class="modal-overlay" id="db-select-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="db-slot-label">馬を選択</span>
+      <span class="modal-close" onclick="closeDBSelectModal()">✕</span>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">馬データベースから選んでね</div>
+    <div id="db-horse-list" style="max-height:60vh;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -860,6 +884,12 @@
     <button class="btn btn-secondary btn-sm mt8" onclick="addKeikaRow()" style="width:100%">＋ 成績を追加（最大5走）</button>
 
     <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:10px">📜 過去実績（5走以前・無制限）</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:8px;">古馬の重賞実績・コース/距離経験の判定に使用されるわ</div>
+    <div id="jisseki-entries"></div>
+    <button class="btn btn-secondary btn-sm mt8" onclick="addJissekiRow()" style="width:100%">＋ 実績を追加</button>
+
+    <div class="divider"></div>
     <div class="section-title" style="margin-bottom:10px">特記事項</div>
     <div class="form-grid cols1">
       <div class="form-group">
@@ -930,7 +960,8 @@ function switchTab(name) {
     }
   });
 
-  if (name === 'saved') renderSaved();
+  if (name === 'saved') { renderSaved(); renderHorseDBList(); }
+  if (name === 'input') renderHorseSlots();
 }
 
 // ===== TOAST =====
@@ -942,17 +973,22 @@ function showToast(msg) {
 }
 
 // ===== MODAL =====
-function openHorseModal(idx) {
+let currentSlotNum = null;
+
+function openHorseModal(idx, slotNum) {
   document.getElementById('horse-modal').classList.add('open');
   document.getElementById('edit-horse-idx').value = idx !== undefined ? idx : -1;
-  document.getElementById('modal-title-text').textContent = idx !== undefined ? '🐴 出走馬を編集' : '🐴 出走馬を追加';
+  currentSlotNum = slotNum || null;
+  document.getElementById('modal-title-text').textContent = idx !== undefined ? '🐴 出走馬を編集' : `🐴 ${slotNum ? slotNum+'番 ' : ''}出走馬を追加`;
 
-  // reset keika rows
   document.getElementById('keika-entries').innerHTML = '';
   keikaCount = 0;
+  document.getElementById('jisseki-entries').innerHTML = '';
+  jissekiCount = 0;
 
   if (idx !== undefined) {
     const h = horses[idx];
+    if (!h) { clearModalForm(); addKeikaRow(); return; }
     document.getElementById('h-waku').value   = h.waku;
     document.getElementById('h-umaban').value = h.umaban;
     document.getElementById('h-sex').value    = h.sex || (h.age?.replace(/[0-9]/g,'') || '牡');
@@ -961,16 +997,22 @@ function openHorseModal(idx) {
     document.getElementById('h-jockey').value = h.jockey;
     document.getElementById('h-weight').value = h.weight;
     document.getElementById('h-sire').value   = h.sire;
-    document.getElementById('h-jushorenh').value  = h.jushoRenh;
-    document.getElementById('h-course-exp').value = h.courseExp;
-    document.getElementById('h-dist-exp').value   = h.distExp;
-    document.getElementById('h-memo').value   = h.memo;
-    document.getElementById('h-rest').value   = h.rest;
+    document.getElementById('h-jushorenh').value  = h.jushoRenh || 'auto';
+    document.getElementById('h-course-exp').value = h.courseExp || 'auto';
+    document.getElementById('h-dist-exp').value   = h.distExp || 'auto';
+    document.getElementById('h-memo').value   = h.memo || '';
+    document.getElementById('h-rest').value   = h.rest || 'normal';
     if (h.keika && h.keika.length) {
       h.keika.forEach(k => addKeikaRow(k));
     } else { addKeikaRow(); }
+    if (h.jisseki && h.jisseki.length) {
+      h.jisseki.forEach(j => addJissekiRow(j));
+    }
   } else {
     clearModalForm();
+    if (slotNum) {
+      document.getElementById('h-umaban').value = slotNum;
+    }
     addKeikaRow();
   }
 }
@@ -1053,25 +1095,27 @@ function calcNewDistScore(keika, targetDist) {
   return 0;
 }
 
+// Rtスコア（ランク別×走数加点方式・青天井）
 function calcRtScore(keika) {
-  const rts = (keika || []).map(k => k.rt).filter(r => r != null && r > 0);
-  if (!rts.length) return 0;
-  const maxRt = Math.max(...rts);
-  if (maxRt >= 120) return 30;
-  if (maxRt >= 115) return 22;
-  if (maxRt >= 110) return 15;
-  if (maxRt >= 105) return 9;
-  return 4;
+  if (!keika || !keika.length) return 0;
+  const rtPerRun = (k) => {
+    if (k.rt == null || k.rt <= 0) return 0;
+    if (k.rt >= 120) return 10;
+    if (k.rt >= 115) return 7;
+    if (k.rt >= 110) return 5;
+    if (k.rt >= 105) return 3;
+    return 1;
+  };
+  return keika.reduce((sum, k) => sum + rtPerRun(k), 0);
 }
 
 // 上がりタイム⚡判定（全体上がりより速い走）
 // 距離別⚡上がり基準
 function getAgariThreshold(distM) {
   const d = parseInt(distM) || 0;
-  if (d <= 1400) return 34.0;
-  if (d <= 2000) return 33.5;
-  if (d <= 2400) return 33.5;
-  return 34.0; // 3000m以上
+  if (d <= 1400) return 33.5;
+  if (d <= 2400) return 33.0;
+  return 33.5; // 3000m以上
 }
 
 // ⚡判定：絶対値基準 OR 全体上がりとの比較（どちらかでOK）
@@ -1102,27 +1146,193 @@ function getDistChangeFlag(keika, targetDist) {
   return null;
 }
 
-// 騎手datalist更新
+// ===== ローテ間隔計算 =====
+function calcRoteWeeks(keika, raceDate) {
+  if (!raceDate || !keika || !keika.length) return null;
+  const latestKeika = keika.find(k => k.raceDate);
+  if (!latestKeika) return null;
+  const d1 = new Date(latestKeika.raceDate);
+  const d2 = new Date(raceDate);
+  if (isNaN(d1) || isNaN(d2)) return null;
+  const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+  return Math.floor(diffDays / 7);
+}
+
+function getRoteLabel(weeks) {
+  if (weeks === null) return null;
+  if (weeks <= 8)  return { label: '通常ローテ', type: 'normal' };
+  if (weeks <= 16) return { label: 'やや間隔あき', type: 'medium' };
+  return { label: '休み明け', type: 'long' };
+}
+
+// ===== 馬データベース =====
+let horseDB = {}; // { "馬名": horseData }
+
+function exportHorseDB() {
+  if (!Object.keys(horseDB).length && !horses.length) {
+    showToast('馬データがないわ！');
+    return;
+  }
+  // 現在の出走馬もDBに追加
+  horses.forEach(h => { if (h.name) horseDB[h.name] = h; });
+  const exportData = {
+    app: 'Nami競馬予想システム',
+    type: 'horseDB',
+    exportedAt: new Date().toLocaleString('ja-JP'),
+    horses: horseDB
+  };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url;
+  a.download = `keiba_horses_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${Object.keys(horseDB).length}頭の馬データを書き出したわ！`);
+}
+
+function importHorseDB(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.type !== 'horseDB' || !data.horses) throw new Error('馬データファイルじゃないわ');
+      horseDB = {...horseDB, ...data.horses};
+      showToast(`${Object.keys(data.horses).length}頭の馬データを読み込んだわ！`);
+      renderHorseSlots();
+    } catch(err) {
+      showToast('読み込みエラー：' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function loadHorseFromDB(name, slotNum) {
+  const h = horseDB[name];
+  if (!h) { showToast(`${name}のデータが見つからないわ`); return; }
+  // A案：直近5走を詳細に、それ以前は実績欄に自動圧縮
+  const horseToLoad = {...h};
+  if (h.keika && h.keika.length > 5) {
+    const recent5 = h.keika.slice(0, 5);
+    const older = h.keika.slice(5);
+    // 古い走を実績欄に圧縮（グレード・着順・コース・距離のみ）
+    const compressed = older.map(k => ({
+      raceName: k.raceName || '',
+      grade: k.grade || '',
+      rank: k.rank || 1,
+      pastCourse: k.pastCourse || '',
+      pastDist: k.pastDist || '',
+    }));
+    horseToLoad.keika = recent5;
+    horseToLoad.jisseki = [...(h.jisseki || []), ...compressed];
+  }
+  // スロット番号の枠番・馬番をセット
+  horseToLoad.umaban = slotNum;
+  horses[slotNum - 1] = horseToLoad;
+  renderHorseSlots();
+  showToast(`${name}を${slotNum}番に読み込んだわ！`);
+}
+
+function renderHorseSlots() {
+  const container = document.getElementById('horse-slots');
+  if (!container) return;
+  container.innerHTML = Array.from({length:18}, (_,i) => {
+    const num = i + 1;
+    const h = horses[i];
+    return `
+    <div style="background:var(--surface2);border:1px solid ${h?'var(--accent)':'var(--border)'};border-radius:8px;padding:10px;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:12px;font-weight:700;color:var(--accent2);width:24px;">${num}番</div>
+        ${h ? `
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:13px;">${h.name}</div>
+            <div style="font-size:10px;color:var(--text3);">${(h.sex||'')}${h.age}歳 ${h.jockey||''}</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="openHorseModal(${i})">編集</button>
+          <button class="btn btn-danger btn-sm" onclick="removeHorseSlot(${i})">削除</button>
+        ` : `
+          <div style="flex:1;color:var(--text3);font-size:12px;">未登録</div>
+          <button class="btn btn-secondary btn-sm" onclick="openHorseModalForSlot(${num})">✏️入力</button>
+          <button class="btn btn-secondary btn-sm" onclick="openDBSelectModal(${num})">📂読込</button>
+        `}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openHorseModalForSlot(num) {
+  openHorseModal(undefined, num);
+}
+
+function openDBSelectModal(slotNum) {
+  const names = Object.keys(horseDB);
+  if (!names.length) {
+    showToast('馬データベースが空よ。まず読み込んでね');
+    return;
+  }
+  const modal = document.getElementById('db-select-modal');
+  const list = document.getElementById('db-horse-list');
+  list.innerHTML = names.map(name => `
+    <div style="padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;">${name}</span>
+      <button class="btn btn-primary btn-sm" onclick="loadHorseFromDB('${name}',${slotNum});closeDBSelectModal()">選択</button>
+    </div>`).join('');
+  document.getElementById('db-slot-label').textContent = `${slotNum}番枠に読み込む`;
+  modal.classList.add('open');
+}
+
+function closeDBSelectModal() {
+  document.getElementById('db-select-modal').classList.remove('open');
+}
+
+function removeHorseSlot(idx) {
+  horses[idx] = undefined;
+  horses = horses.filter((h,i) => h !== undefined || i < 18);
+  // 穴を詰めずに保持
+  const newHorses = new Array(18).fill(undefined);
+  horses.forEach((h,i) => { if(h) newHorses[i] = h; });
+  horses = newHorses.filter(h => h !== undefined);
+  renderHorseSlots();
+  renderHorseList();
+}
+
 function refreshJockeyList() {
   const list = document.getElementById('jockey-datalist');
   if (!list) return;
   const names = new Set();
-  horses.forEach(h => { if (h.jockey) names.add(h.jockey); });
+  horses.forEach(h => { if (h && h.jockey) names.add(h.jockey); });
   list.innerHTML = [...names].map(n => `<option value="${n}">`).join('');
 }
 function autoDetectJusho(manualVal, keika) {
   if (manualVal !== 'auto') return manualVal;
-  // 連対（1・2着）
-  const rentai = (keika || []).filter(k => k.rank <= 2).map(k => k.grade);
-  if (rentai.some(g => g === 'G1')) return 'g1';
-  if (rentai.some(g => ['G2','G3'].includes(g))) return 'g23';
-  if (rentai.some(g => ['L','OP','JP'].includes(g))) return 'op';
-  // 3着（複勝圏）
+  const rentai = (keika || []).filter(k => k.rank <= 2).map(k => ({g: k.grade, r: k.rank}));
+  if (rentai.some(x => x.g === 'G1' && x.r === 1)) return 'g1';
+  if (rentai.some(x => x.g === 'G1' && x.r === 2)) return 'g1_2nd';
+  if (rentai.some(x => ['G2','G3'].includes(x.g))) return 'g23';
+  if (rentai.some(x => ['L','OP','JP'].includes(x.g))) return 'op';
   const fukusho = (keika || []).filter(k => k.rank === 3).map(k => k.grade);
   if (fukusho.some(g => g === 'G1')) return 'g1_3rd';
   if (fukusho.some(g => ['G2','G3'].includes(g))) return 'g23_3rd';
   if (fukusho.some(g => ['L','OP','JP'].includes(g))) return 'op_3rd';
   return 'none';
+}
+
+// 重賞フラグを全種類チェック（複数フラグ対応）
+function getJushoFlags(keika) {
+  const flags = [];
+  const k = keika || [];
+  if (k.some(x => x.grade === 'G1' && x.rank === 1))                      flags.push('🏆G1勝ち鞍');
+  if (k.some(x => x.grade === 'G1' && x.rank === 2))                      flags.push('🥈G1・2着実績');
+  if (k.some(x => x.grade === 'G1' && x.rank === 3))                      flags.push('🥉G1・3着実績');
+  if (k.some(x => ['G2','G3'].includes(x.grade) && x.rank <= 2))          flags.push('🏅重賞連対あり');
+  if (k.some(x => ['G2','G3'].includes(x.grade) && x.rank === 3))         flags.push('🪙重賞3着あり');
+  if (k.some(x => ['L','OP','JP'].includes(x.grade) && x.rank <= 2))      flags.push('🔥OP/L連対あり');
+  if (k.some(x => ['L','OP','JP'].includes(x.grade) && x.rank === 3))     flags.push('🔥OP/L・3着実績');
+  return flags;
 }
 
 function autoDetectCourseExp(manualVal, keika, targetCourse) {
@@ -1170,6 +1380,83 @@ function autoDetectDistExp(manualVal, keika, targetDist) {
   if (longerWin) return 'longer';
   return 'none';
 }
+// ===== JISSEKI (PAST RECORDS) ROWS =====
+let jissekiCount = 0;
+
+function addJissekiRow(data) {
+  const idx = jissekiCount++;
+  const div = document.createElement('div');
+  div.id = 'jisseki-row-' + idx;
+  div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;';
+
+  const gradeOpts = ['G1','G2','G3','JP','L','OP','3勝','2勝','1勝','未勝利'].map(g =>
+    `<option value="${g}"${data&&data.grade==g?' selected':''}>${g}</option>`).join('');
+
+  const courseOpts = ['','tokyo','nakayama','hanshin_outer','hanshin_inner','kyoto_outer','kyoto_inner','chukyo','niigata_outer','niigata_inner','fukushima','kokura','sapporo','hakodate'].map(v => {
+    const label = v ? (COURSE_DATA[v]?.name || v) : '選択';
+    return `<option value="${v}"${data&&data.pastCourse==v?' selected':''}>${label}</option>`;
+  }).join('');
+
+  const distOpts = ['1200','1400','1600','1800','2000','2200','2400','2500','3000','3200','3600'].map(d =>
+    `<option value="${d}"${data&&data.pastDist==d?' selected':''}>${d}m</option>`).join('');
+
+  const rankOpts = Array.from({length:18},(_,i)=>i+1).map(n =>
+    `<option value="${n}"${data&&data.rank==n?' selected':''}>${n}着</option>`).join('');
+
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:10px;color:var(--text3);font-weight:700;">実績${idx+1}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeJissekiRow(${idx})">削除</button>
+    </div>
+    <div class="form-group" style="margin-bottom:8px;">
+      <label>レース名</label>
+      <input type="text" id="j${idx}-racename" placeholder="例：天皇賞秋2022" value="${data&&data.raceName||''}" style="font-size:12px;">
+    </div>
+    <div class="form-grid cols3" style="gap:6px;">
+      <div class="form-group">
+        <label>グレード</label>
+        <select id="j${idx}-grade" style="padding:6px 4px;font-size:11px;">${gradeOpts}</select>
+      </div>
+      <div class="form-group">
+        <label>着順</label>
+        <select id="j${idx}-rank" style="padding:6px 4px;font-size:11px;">${rankOpts}</select>
+      </div>
+      <div class="form-group">
+        <label>競馬場</label>
+        <select id="j${idx}-course" style="padding:6px 4px;font-size:11px;">${courseOpts}</select>
+      </div>
+    </div>
+    <div class="form-grid" style="gap:6px;margin-top:6px;">
+      <div class="form-group">
+        <label>距離</label>
+        <select id="j${idx}-dist" style="padding:6px 4px;font-size:11px;">${distOpts}</select>
+      </div>
+    </div>
+  `;
+  document.getElementById('jisseki-entries').appendChild(div);
+}
+
+function removeJissekiRow(idx) {
+  const el = document.getElementById('jisseki-row-' + idx);
+  if (el) el.remove();
+}
+
+function collectJissekiRows() {
+  const rows = [];
+  for (let i = 0; i < jissekiCount; i++) {
+    const row = document.getElementById('jisseki-row-' + i);
+    if (!row) continue;
+    rows.push({
+      raceName:   document.getElementById('j'+i+'-racename')?.value.trim() || '',
+      grade:      document.getElementById('j'+i+'-grade')?.value || '',
+      rank:       parseInt(document.getElementById('j'+i+'-rank')?.value) || 1,
+      pastCourse: document.getElementById('j'+i+'-course')?.value || '',
+      pastDist:   document.getElementById('j'+i+'-dist')?.value || '',
+    });
+  }
+  return rows;
+}
+
 let keikaCount = 0;
 
 // 登録済み馬の全レース名を重複なしで返す
@@ -1264,13 +1551,19 @@ function addKeikaRow(data) {
       <button class="btn btn-danger btn-sm" onclick="removeKeikaRow(${idx})">削除</button>
     </div>
 
-    <div class="form-group" style="margin-bottom:8px;">
-      <label>レース名</label>
-      <input type="text" id="k${idx}-racename" list="racename-datalist"
-        placeholder="例：高松宮記念2025"
-        value="${data&&data.raceName||''}"
-        oninput="onRaceNameInput(${idx})"
-        style="font-size:12px;">
+    <div class="form-grid" style="gap:6px;margin-bottom:8px;">
+      <div class="form-group">
+        <label>レース名</label>
+        <input type="text" id="k${idx}-racename" list="racename-datalist"
+          placeholder="例：高松宮記念2025"
+          value="${data&&data.raceName||''}"
+          oninput="onRaceNameInput(${idx})"
+          style="font-size:12px;">
+      </div>
+      <div class="form-group">
+        <label>レース日 <span style="color:var(--accent);font-size:9px;">※共有</span></label>
+        <input type="date" id="k${idx}-racedate" value="${data&&data.raceDate||''}" style="font-size:12px;">
+      </div>
     </div>
 
     <div class="form-grid cols3" style="gap:6px;margin-bottom:8px;">
@@ -1367,6 +1660,7 @@ function collectKeikaRows() {
     const toCorner = v => (v && v !== '' && v !== '—') ? v : '—';
     rows.push({
       raceName:   document.getElementById('k'+i+'-racename')?.value.trim() || '',
+      raceDate:   document.getElementById('k'+i+'-racedate')?.value || '',
       pastCourse: document.getElementById('k'+i+'-course')?.value || '',
       pastDist:   document.getElementById('k'+i+'-dist')?.value || '',
       pastBaba:   document.getElementById('k'+i+'-baba')?.value || 'good',
@@ -1420,43 +1714,30 @@ function saveHorse() {
     memo:      document.getElementById('h-memo').value,
     rest:      document.getElementById('h-rest').value,
     keika,
+    jisseki:   collectJissekiRows(),
   };
 
   const editIdx = parseInt(document.getElementById('edit-horse-idx').value);
   if (editIdx >= 0) {
     horses[editIdx] = horse;
+  } else if (currentSlotNum) {
+    // スロット番号指定で保存
+    horses[currentSlotNum - 1] = horse;
   } else {
     horses.push(horse);
   }
 
+  // 馬DBにも自動更新
+  horseDB[name] = {...horse};
+
   closeHorseModal();
-  renderHorseList();
+  renderHorseSlots();
   showToast(`${name} を登録したわ！`);
 }
 
 // ===== RENDER HORSE LIST =====
 function renderHorseList() {
-  const container = document.getElementById('horse-list');
-  if (!horses.length) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🐴</div><div class="empty-state-text">まだ出走馬が登録されていないわ</div></div>';
-    return;
-  }
-
-  container.innerHTML = horses.map((h, i) => {
-    const wc = WAKU_COLORS[h.waku] || ['#888','#fff'];
-    return `
-      <div class="horse-card">
-        <div class="horse-header">
-          <div class="waku-badge" style="background:${wc[0]};color:${wc[1]};">${h.waku}</div>
-          <div class="horse-name-big">${h.umaban ? h.umaban+'番 ' : ''}${h.name}</div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-secondary btn-sm" onclick="openHorseModal(${i})">編集</button>
-            <button class="btn btn-danger btn-sm" onclick="removeHorse(${i})">削除</button>
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--text3);">${(h.sex||'')}${h.age}歳 | ${h.jockey||'騎手未入力'} | ${h.weight?h.weight+'kg':''}</div>
-      </div>`;
-  }).join('');
+  renderHorseSlots();
 }
 
 function removeHorse(i) {
@@ -1467,7 +1748,8 @@ function removeHorse(i) {
 
 // ===== ANALYZE =====
 function analyzeAll() {
-  if (!horses.length) { showToast('出走馬を登録してね！'); return; }
+  const validHorses = horses.filter(h => h && h.name);
+  if (!validHorses.length) { showToast('出走馬を登録してね！'); return; }
 
   const raceInfo = {
     name: document.getElementById('race-name').value || 'レース名未入力',
@@ -1484,7 +1766,7 @@ function analyzeAll() {
 
   const courseInfo = COURSE_DATA[raceInfo.course] || { straight: 400, type: 'mid', slope: false, name: '不明' };
 
-  const analyzed = horses.map(h => analyzeHorse(h, raceInfo, courseInfo));
+  const analyzed = validHorses.map(h => analyzeHorse(h, raceInfo, courseInfo));
   analyzed.sort((a,b) => b.totalScore - a.totalScore);
 
   renderResult(analyzed, raceInfo, courseInfo);
@@ -1496,15 +1778,23 @@ function analyzeAll() {
 // ===== HORSE ANALYSIS =====
 function analyzeHorse(h, race, course) {
   let scores = { course: 0, dist: 0, blood: 0, kyakushitsu: 0, rt: 0 };
-  let flags = [];
+  let plusFlags  = [];
+  let minusFlags = [];
+  let noteFlags  = [];
 
-  // --- 1. コース適性（上限10pt） ---
-  const courseExp = autoDetectCourseExp('auto', h.keika, race.course);
+  const allKeika = [...(h.keika || []), ...(h.jisseki || [])];
+
+  // --- 1. コース適性（上限10pt・jisseki込み） ---
+  const courseExp = autoDetectCourseExp('auto', allKeika, race.course);
   const courseScoreMap = { win: 10, placed: 7, ran: 4, similar: 2, none: 0 };
   scores.course = courseScoreMap[courseExp] || 0;
+  const hasCourseExp = allKeika.some(k => k.pastCourse && k.pastCourse === race.course);
+  if (!hasCourseExp && race.course) minusFlags.push('🌀コース未経験');
 
-  // --- 2. 距離適性（上限6pt・好走実績方式） ---
-  scores.dist = calcNewDistScore(h.keika, race.distance);
+  // --- 2. 距離適性（上限6pt・jisseki込み） ---
+  scores.dist = calcNewDistScore(allKeika, race.distance);
+  const hasDistExp = allKeika.some(k => k.pastDist && parseInt(k.pastDist) === race.distance);
+  if (!hasDistExp && race.distance) minusFlags.push('🌀距離未経験');
 
   // --- 3. 血統適性（上限5pt） ---
   scores.blood = Math.min(calcBloodScore(h.sire, course, race), 5);
@@ -1516,80 +1806,77 @@ function analyzeHorse(h, race, course) {
   scores.kyakushitsu = Math.min(calcKyakushitsuScore(kyakushitsu, course, race) * 1.4, 7);
   scores.kyakushitsu = Math.round(scores.kyakushitsu);
 
-  // --- 6. Rtスコア（青天井） ---
+  // 枠順不利
+  const isSmallCourse = course.type === 'small';
+  const isHighPace = race.nigemas >= 3;
+  if ((isSmallCourse || isHighPace) && h.waku >= 7) minusFlags.push('🌀枠順不利');
+
+  // --- 6. Rtスコア ---
   scores.rt = calcRtScore(h.keika);
 
-  // --- 7. 重賞実績フラグのみ（スコアなし） ---
-  const jushoRenh = autoDetectJusho('auto', h.keika);
-  if (jushoRenh === 'g1') flags.push('G1連対あり');
-  else if (jushoRenh === 'g23') flags.push('重賞連対あり');
-  else if (jushoRenh === 'g1_3rd') flags.push('G1・3着実績');
-  else if (jushoRenh === 'g23_3rd') flags.push('重賞3着実績');
-  else if (jushoRenh === 'op') flags.push('OP/L連対あり');
-  else if (jushoRenh === 'op_3rd') flags.push('OP/L・3着実績');
+  // --- 7. 重賞実績フラグ（全種類・複数対応） ---
+  const jushoFlags = getJushoFlags(allKeika);
+  const g1Flags = jushoFlags.filter(f => f.startsWith('🏆')||f.startsWith('🥈')||f.startsWith('🥉')||f.startsWith('🏅')||f.startsWith('🪙'));
+  const opFlags = jushoFlags.filter(f => f.startsWith('🔥'));
+  g1Flags.forEach(f => plusFlags.push(f));
+  opFlags.forEach(f => noteFlags.push(f));
 
-  // --- 8. 穴馬フラグ（独立・スコア加算なし） ---
-  if (hasCornerPushup(h.keika)) flags.push('3-4C押し上げ力');
-  if (hasHighPaceGoodAgari(h.keika)) flags.push('ハイペース末脚');
-  if (h.weight >= 500 && ['先行','好位差し'].includes(kyakushitsu)) flags.push('大型馬×先行脚質');
+  // --- 8. その他フラグ ---
+  if (hasCornerPushup(h.keika)) plusFlags.push('3-4C押し上げ力💪');
+  if (hasHighPaceGoodAgari(h.keika)) plusFlags.push('ハイペース末脚💨');
+  if (h.weight >= 500 && ['先行','好位差し'].includes(kyakushitsu)) noteFlags.push('🔥大型馬×先行脚質');
 
   if (h.memo && (h.memo.includes('落馬') || h.memo.includes('妨害') || h.memo.includes('出遅れ') ||
       h.memo.includes('包まれ') || h.memo.includes('競走中止') || h.memo.includes('不利'))) {
-    flags.push('前走不利あり');
+    noteFlags.push('🔥前走不利あり');
   }
 
-  if (['win','placed'].includes(courseExp) && scores.dist >= 4) {
-    flags.push('コース×距離実績');
-  }
+  if (['win','placed'].includes(courseExp) && scores.dist >= 4) plusFlags.push('コース×距離実績✌️');
 
-  // 上昇馬フラグ
-  const hasGradedExp = (h.keika || []).some(k => ['G1','G2','G3','JP'].includes(k.grade));
+  const hasGradedExp = allKeika.some(k => ['G1','G2','G3','JP'].includes(k.grade));
   if (!hasGradedExp) {
-    const lowerRentai = (h.keika || []).filter(k =>
-      k.rank <= 2 && ['L','OP','3勝','2勝','1勝'].includes(k.grade)
-    );
-    if (lowerRentai.length >= 3) flags.push('上昇馬（下級連対3回以上）');
+    const lowerRentai = allKeika.filter(k => k.rank <= 2 && ['L','OP','3勝','2勝','1勝'].includes(k.grade));
+    if (lowerRentai.length >= 3) noteFlags.push('上昇馬⤴️');
   }
 
-  // 末脚型フラグ
   const flashCount = getAgariFlashCount(h.keika);
-  if (flashCount >= 3) flags.push('末脚型（上がり最速級3回以上）');
+  if (flashCount >= 4) plusFlags.push('末脚本物🦵');
 
-  // 距離変化フラグ（前走比±600m以上）
-  const prevDist = h.keika && h.keika.length ? parseInt(h.keika[0].pastDist) : null;
-  if (prevDist && !isNaN(prevDist)) {
-    const diff = race.distance - prevDist;
-    if (diff >= 600)  flags.push('📏距離大幅変更（延長）');
-    if (diff <= -600) flags.push('📏距離大幅変更（短縮）');
-  }
-
-  // 距離傾向フラグ（過去3走以上）
   const distChange = getDistChangeFlag(h.keika, race.distance);
-  if (distChange === 'down') flags.push('⬇️距離短縮傾向（末脚注意）');
-  if (distChange === 'up')   flags.push('⬆️距離延長（スタミナ未知数）');
+  if (distChange === 'down') noteFlags.push('🔥距離短縮傾向');
+  if (distChange === 'up')   minusFlags.push('🌀距離延長（スタミナ未知数）');
 
-  // 高Rt穴馬フラグ
-  const highRtRaces = (h.keika || []).filter(k => k.rt != null && k.rt >= 110);
+  const highRtRaces = allKeika.filter(k => k.rt != null && k.rt >= 110);
   const highRtOut = highRtRaces.filter(k => k.rank > 3);
-  if (highRtRaces.length >= 2 && highRtOut.length >= highRtRaces.length / 2) {
-    flags.push('高Rt×着外（能力秘めた穴馬）');
+  if (highRtRaces.length >= 2 && highRtOut.length >= highRtRaces.length / 2) noteFlags.push('高Rt×着外🔍');
+
+  const prevDist = h.keika && h.keika.length ? parseInt(h.keika[0].pastDist) : null;
+  if (prevDist && !isNaN(prevDist) && Math.abs(race.distance - prevDist) >= 600) noteFlags.push('🔄距離変更');
+
+  // 衰えフラグ
+  const hasGoodRecord = allKeika.some(k => ['G1','G2','G3'].includes(k.grade) && k.rank <= 3);
+  if (hasGoodRecord && h.keika && h.keika.length >= 4) {
+    const last4 = h.keika.slice(0, 4).map(k => k.rank);
+    const isDecline = last4.every((r, i) => i === 0 || r > last4[i-1]);
+    if (isDecline) minusFlags.push('🌀衰え傾向（近走低下）');
   }
 
-  // 穴馬指数は独立（総合スコアに加算しない）
-  const anaScore = Math.min(flags.length * 2, 10);
+  const allFlags = [...plusFlags, ...noteFlags, ...minusFlags];
+  const anaScore = Math.min(plusFlags.length * 2 + noteFlags.length, 10);
 
-  // --- 休み明け補正 ---
   let restPenalty = 0;
   if (h.rest === 'long') restPenalty = -2;
 
-  // 総合点 = Rt + コース + 脚質 + 血統 + 距離（穴馬指数・重賞実績は含まない）
   const totalScore = scores.rt + scores.course + scores.kyakushitsu + scores.blood + scores.dist + restPenalty;
 
   return {
     ...h,
     kyakushitsu,
     scores,
-    flags,
+    plusFlags,
+    minusFlags,
+    noteFlags,
+    flags: allFlags,
     anaScore,
     totalScore: Math.max(0, totalScore),
     restPenalty,
@@ -1723,7 +2010,12 @@ function renderResult(analyzed, race, course) {
           <div class="ranking-info">
             <div class="ranking-name">${h.umaban?h.umaban+'番 ':''}${h.name}</div>
             <div class="ranking-meta">${h.kyakushitsu} | ${(h.sex||'')}${h.age}歳 | ${h.jockey||'—'} | ${h.weight?h.weight+'kg':'—'}</div>
-            ${h.flags.length ? `<div class="ana-flags" style="margin-top:4px;">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>` : ''}
+            ${(h.plusFlags&&h.plusFlags.length)||(h.noteFlags&&h.noteFlags.length)||(h.minusFlags&&h.minusFlags.length) ? `
+              <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">
+                ${(h.plusFlags||[]).map(f=>`<span style="font-size:9px;padding:2px 6px;background:rgba(224,82,82,0.15);border:1px solid rgba(224,82,82,0.4);border-radius:4px;color:#f08080;font-weight:700;">${f}</span>`).join('')}
+                ${(h.noteFlags||[]).map(f=>`<span style="font-size:9px;padding:2px 6px;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);border-radius:4px;color:var(--accent2);font-weight:700;">${f}</span>`).join('')}
+                ${(h.minusFlags||[]).map(f=>`<span style="font-size:9px;color:#7ad4f0;">🌀${f}</span>`).join('')}
+              </div>` : ''}
           </div>
           <div style="text-align:right;flex-shrink:0;">
             <div class="ranking-score">${h.totalScore}</div>
@@ -1780,12 +2072,22 @@ function renderHorseDetail(h) {
           <div class="score-val" style="color:${s.color}">${s.val}</div>
         </div>`).join('')}
 
-      ${h.anaScore > 0 ? `
-        <div style="margin-top:10px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:10px;">
-          <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:6px;">⭐ 穴馬指数 ${h.anaScore}pt</div>
-          <div class="ana-flags">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>
-        </div>` :
-        h.flags.length ? `<div class="ana-flags" style="margin-top:8px;">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>` : ''}
+      ${(h.plusFlags && h.plusFlags.length) || (h.noteFlags && h.noteFlags.length) || (h.minusFlags && h.minusFlags.length) || h.anaScore > 0 ? `
+        <div style="margin-top:10px;">
+          ${h.plusFlags && h.plusFlags.length ? `
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
+              ${h.plusFlags.map(f=>`<span style="font-size:10px;padding:3px 8px;background:rgba(224,82,82,0.15);border:1px solid rgba(224,82,82,0.4);border-radius:4px;color:#f08080;font-weight:700;">${f}</span>`).join('')}
+            </div>` : ''}
+          ${h.noteFlags && h.noteFlags.length ? `
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
+              ${h.noteFlags.map(f=>`<span style="font-size:10px;padding:3px 8px;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);border-radius:4px;color:var(--accent2);font-weight:700;">${f}</span>`).join('')}
+            </div>` : ''}
+          ${h.minusFlags && h.minusFlags.length ? `
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
+              ${h.minusFlags.map(f=>`<span style="font-size:10px;color:#7ad4f0;">${f}</span>`).join('')}
+            </div>` : ''}
+          ${h.anaScore > 0 ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;">穴馬指数 ${h.anaScore}pt</div>` : ''}
+        </div>` : ''}
       ${h.memo ? `<div style="margin-top:8px;font-size:11px;color:var(--accent);background:rgba(201,168,76,0.08);border-radius:6px;padding:6px 10px;">📝 ${h.memo}</div>` : ''}
       ${h.restPenalty < 0 ? `<div style="margin-top:6px;font-size:10px;color:var(--red);">⚠️ 休み明け補正 ${h.restPenalty}pt</div>` : ''}
 
@@ -1893,7 +2195,11 @@ function renderTenkai(analyzed, race, course) {
               ${h.umaban?h.umaban+'番 ':''}${h.name}
               <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px;">${h.kyakushitsu} | ${h.totalScore}pt</span>
             </div>
-            <div class="ana-flags">${h.flags.map(f=>`<span class="ana-flag">⭐${f}</span>`).join('')}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
+              ${(h.plusFlags||[]).map(f=>`<span style="font-size:10px;padding:2px 8px;background:rgba(224,82,82,0.15);border:1px solid rgba(224,82,82,0.4);border-radius:4px;color:#f08080;font-weight:700;">${f}</span>`).join('')}
+              ${(h.noteFlags||[]).map(f=>`<span style="font-size:10px;padding:2px 8px;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);border-radius:4px;color:var(--accent2);font-weight:700;">${f}</span>`).join('')}
+              ${(h.minusFlags||[]).map(f=>`<span style="font-size:10px;color:#7ad4f0;">🌀${f}</span>`).join('')}
+            </div>
             ${h.memo?`<div style="margin-top:6px;font-size:11px;color:var(--accent);">📝 ${h.memo}</div>`:''}
           </div>`).join('')
         : '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">条件を満たす穴馬候補は今のところいないわ</div>'}
@@ -2075,6 +2381,40 @@ function importJSON(event) {
   };
   reader.readAsText(file, 'UTF-8');
 }
+
+// ===== HORSE DB LIST =====
+function renderHorseDBList() {
+  const container = document.getElementById('horsedb-list');
+  if (!container) return;
+  const names = Object.keys(horseDB);
+  if (!names.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px;">馬データがまだないわ</div>';
+    return;
+  }
+  container.innerHTML = names.map(name => {
+    const h = horseDB[name];
+    return `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-weight:700;font-size:13px;">${name}</div>
+        <div style="font-size:10px;color:var(--text3);">${(h.sex||'')}${h.age}歳 | ${h.keika?h.keika.length+'走分':''}${h.jisseki&&h.jisseki.length?'+実績'+h.jisseki.length:''}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deleteHorseFromDB('${name}')">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function deleteHorseFromDB(name) {
+  if (!confirm(`「${name}」を馬データベースから削除するわよ？`)) return;
+  delete horseDB[name];
+  renderHorseDBList();
+  showToast(`${name}を削除したわ`);
+}
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', () => {
+  renderHorseSlots();
+});
 </script>
 </body>
 </html>
