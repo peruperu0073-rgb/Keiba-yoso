@@ -583,6 +583,7 @@
           <option value="kokura">小倉（293m）</option>
           <option value="sapporo">札幌（266.1m）</option>
           <option value="hakodate">函館（262m）</option>
+          <option value="overseas">海外</option>
         </select>
       </div>
       <div class="form-group">
@@ -916,7 +917,7 @@
 
 <script>
 // ===== STATE =====
-let horses = [];
+let horses = new Array(18).fill(undefined);
 let raceAnalyzed = false;
 
 const WAKU_COLORS = {
@@ -1244,14 +1245,17 @@ function renderHorseSlots() {
   container.innerHTML = Array.from({length:18}, (_,i) => {
     const num = i + 1;
     const h = horses[i];
+    const wakuColors = {1:['#fff','#111'],2:['#111','#fff'],3:['#e05252','#fff'],4:['#5299e0','#fff'],5:['#f0c040','#111'],6:['#52c97a','#111'],7:['#e08050','#fff'],8:['#c070c0','#fff']};
+    const wc = h && h.waku ? (wakuColors[h.waku]||['#555','#fff']) : ['#2a2a3d','#5a5a72'];
     return `
     <div style="background:var(--surface2);border:1px solid ${h?'var(--accent)':'var(--border)'};border-radius:8px;padding:10px;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:8px;">
-        <div style="font-size:12px;font-weight:700;color:var(--accent2);width:24px;">${num}番</div>
+        <div style="width:28px;height:28px;border-radius:6px;background:${wc[0]};color:${wc[1]};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;flex-shrink:0;">${h&&h.waku?h.waku:'—'}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text3);width:28px;flex-shrink:0;">${num}番</div>
         ${h ? `
           <div style="flex:1;">
             <div style="font-weight:700;font-size:13px;">${h.name}</div>
-            <div style="font-size:10px;color:var(--text3);">${(h.sex||'')}${h.age}歳 ${h.jockey||''}</div>
+            <div style="font-size:10px;color:var(--text3);">${(h.sex||'')}${h.age}歳 ${h.jockey||''} ${h.umaban?h.umaban+'番':''}/${h.waku?h.waku+'枠':''}</div>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="openHorseModal(${i})">編集</button>
           <button class="btn btn-danger btn-sm" onclick="removeHorseSlot(${i})">削除</button>
@@ -1292,13 +1296,7 @@ function closeDBSelectModal() {
 
 function removeHorseSlot(idx) {
   horses[idx] = undefined;
-  horses = horses.filter((h,i) => h !== undefined || i < 18);
-  // 穴を詰めずに保持
-  const newHorses = new Array(18).fill(undefined);
-  horses.forEach((h,i) => { if(h) newHorses[i] = h; });
-  horses = newHorses.filter(h => h !== undefined);
   renderHorseSlots();
-  renderHorseList();
 }
 
 function refreshJockeyList() {
@@ -1728,16 +1726,24 @@ function saveHorse() {
 
   const editIdx = parseInt(document.getElementById('edit-horse-idx').value);
   if (editIdx >= 0) {
+    // 編集時は同じスロットに上書き
     horses[editIdx] = horse;
   } else if (currentSlotNum) {
-    // スロット番号指定で保存
+    // スロット番号指定で保存（1-indexed → 0-indexed）
     horses[currentSlotNum - 1] = horse;
   } else {
-    horses.push(horse);
+    // スロット未指定の場合は最初の空きスロットに入れる
+    const emptyIdx = horses.findIndex(h => !h);
+    if (emptyIdx >= 0) {
+      horses[emptyIdx] = horse;
+    } else {
+      showToast('18頭分のスロットが全て埋まってるわ！');
+      return;
+    }
   }
 
   // 馬DBにも自動更新
-  horseDB[name] = {...horse};
+  horseDB[name] = JSON.parse(JSON.stringify(horse));
 
   closeHorseModal();
   renderHorseSlots();
@@ -2305,7 +2311,7 @@ function renderSaved() {
     <div class="saved-race-item">
       <div class="saved-race-info">
         <div class="saved-race-name">${s.raceName}</div>
-        <div class="saved-race-meta">${COURSE_DATA[s.course]?.name||s.course||'—'} ${s.distance||'—'}m ${s.grade||''} | ${s.horses.length}頭</div>
+        <div class="saved-race-meta">${COURSE_DATA[s.course]?.name||s.course||'—'} ${s.distance||'—'}m ${s.grade||''} | ${(s.horses||[]).filter(h=>h).length}頭</div>
         <div style="font-size:10px;color:var(--accent);margin-top:2px;">💾 ${s.savedAt}</div>
       </div>
       <div class="btn-group">
@@ -2333,7 +2339,9 @@ function loadRace(i) {
     document.getElementById('race-nigemas').value = s.raceForm.nigemas || '1';
     document.getElementById('race-tosu').value = s.raceForm.tosu || '16';
   }
-  horses = s.horses || [];
+  const loaded = s.horses || [];
+  horses = new Array(18).fill(undefined);
+  loaded.forEach((h, i) => { if (h && i < 18) horses[i] = h; });
   renderHorseList();
   switchTab('input');
   showToast(`「${s.raceName}」を読み込んだわ！`);
