@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>森本奈美 — Profile & Works</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Serif+JP:wght@200;300;400&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --white: #FFFFFF;
+    --off-white: #F8F6F2;
+    --navy: #1E2761;
+    --gold: #C9A96E;
+    --gold-light: #E8D5B0;
+    --charcoal: #2D2D2D;
+    --gray: #888888;
+    --light-gray: #E8E4DE;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--white); color: var(--charcoal); overflow-x: hidden; }
+
+  .nav-dots { position: fixed; right: 1.5rem; top: 50%; transform: translateY(-50%); z-index: 100; display: flex; flex-direction: column; gap: 0.6rem; }
+  .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--light-gray); cursor: pointer; transition: all 0.3s; border: none; }
+  .nav-dot.active { background: var(--gold); transform: scale(1.4); }
+
+  .slide { width: 100%; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 5rem 4rem; position: relative; overflow: hidden; }
+
+  /* COVER */
+  .slide-cover { background: var(--navy); flex-direction: column; text-align: center; }
+  .slide-cover::before { content: ''; position: absolute; top: -20%; right: -10%; width: 60%; height: 140%; background: radial-gradient(ellipse, rgba(201,169,110,0.12) 0%, transparent 70%); pointer-events: none; }
+  .cover-en { font-family: 'Cormorant Garamond', serif; font-size: 0.8rem; letter-spacing: 0.4em; color: var(--gold); text-transform: uppercase; margin-bottom: 2rem; opacity: 0; animation: fadeUp 1s ease 0.3s forwards; }
+  .cover-name-jp { font-family: 'Noto Serif JP', serif; font-weight: 200; font-size: clamp(3rem, 6vw, 5rem); color: var(--white); letter-spacing: 0.15em; opacity: 0; animation: fadeUp 1s ease 0.6s forwards; }
+  .cover-name-en { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: clamp(1rem, 2vw, 1.4rem); color: var(--gold-light); letter-spacing: 0.2em; margin-top: 0.8rem; opacity: 0; animation: fadeUp 1s ease 0.9s forwards; }
+  .cover-divider { width: 60px; height: 1px; background: var(--gold); margin: 2.5rem auto; opacity: 0; animation: fadeUp 1s ease 1.1s forwards; }
+  .cover-tagline { font-family: 'Noto Serif JP', serif; font-weight: 300; font-size: clamp(0.88rem, 1.5vw, 1.05rem); color: rgba(255,255,255,0.75); letter-spacing: 0.1em; line-height: 2.2; opacity: 0; animation: fadeUp 1s ease 1.3s forwards; }
+  .cover-roles { display: flex; gap: 1.5rem; margin-top: 3rem; justify-content: center; flex-wrap: wrap; opacity: 0; animation: fadeUp 1s ease 1.6s forwards; }
+  .cover-role { font-family: 'Cormorant Garamond', serif; font-size: 0.78rem; letter-spacing: 0.28em; color: var(--gold); text-transform: uppercase; padding: 0.4rem 1.2rem; border: 1px solid rgba(201,169,110,0.4); }
+
+  /* INNER SLIDES */
+  .inner { max-width: 860px; width: 100%; }
+  .slide-num { position: absolute; top: 3rem; right: 3.5rem; font-family: 'Cormorant Garamond', serif; font-size: 7rem; font-weight: 300; line-height: 1; pointer-events: none; }
+  .section-label { font-family: 'Cormorant Garamond', serif; font-size: 0.72rem; letter-spacing: 0.45em; color: var(--gold); text-transform: uppercase; margin-bottom: 1.2rem; display: block; }
+  .section-title { font-family: 'Noto Serif JP', serif; font-weight: 300; font-size: clamp(1.5rem, 3vw, 2.2rem); color: var(--navy); letter-spacing: 0.1em; line-height: 1.7; }
+
+  /* VISION */
+  .slide-vision { background: var(--white); }
+  .slide-vision .slide-num { color: var(--light-gray); }
+  .vision-quote { font-family: 'Noto Serif JP', serif; font-weight: 200; font-size: clamp(1rem, 1.8vw, 1.2rem); color: var(--navy); line-height: 2; border-left: 3px solid var(--gold); padding-left: 1.8rem; margin: 2.2rem 0; }
+  .vision-body { font-size: clamp(0.82rem, 1.2vw, 0.92rem); color: #555; line-height: 2.3; font-weight: 300; letter-spacing: 0.04em; }
+  .vision-kw { display: inline-block; background: var(--navy); color: var(--gold); font-family: 'Cormorant Garamond', serif; font-size: 0.78rem; letter-spacing: 0.25em; padding: 0.3rem 1rem; margin-top: 2rem; }
+
+  /* PROFILE */
+  .slide-profile { background: var(--off-white); }
+  .slide-profile .slide-num { color: rgba(30,39,97,0.07); }
+  .profile-wrap { display: flex; gap: 5rem; align-items: flex-start; flex-wrap: wrap; }
+  .photo-frame { position: relative; flex-shrink: 0; }
+  .photo-placeholder { width: clamp(160px, 18vw, 220px); height: clamp(200px, 24vw, 280px); background: linear-gradient(135deg, #DDD9D1, #C8C3BA); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 0.5rem; position: relative; z-index: 1; }
+  .photo-placeholder span { font-family: 'Cormorant Garamond', serif; font-size: 0.65rem; letter-spacing: 0.3em; color: var(--gray); text-transform: uppercase; }
+  .photo-border { position: absolute; bottom: -10px; right: -10px; width: 100%; height: 100%; border: 2px solid var(--gold); z-index: 0; }
+  .profile-detail { flex: 1; min-width: 260px; }
+  .p-name-jp { font-family: 'Noto Serif JP', serif; font-weight: 300; font-size: clamp(1.8rem, 3.5vw, 2.6rem); color: var(--navy); letter-spacing: 0.12em; }
+  .p-name-en { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: clamp(0.9rem, 1.5vw, 1.05rem); color: var(--gold); letter-spacing: 0.2em; margin-top: 0.3rem; margin-bottom: 1.5rem; }
+  .p-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.8rem; }
+  .p-tag { font-size: 0.7rem; letter-spacing: 0.12em; color: var(--navy); border: 1px solid var(--navy); padding: 0.22rem 0.75rem; }
+  .p-bio { font-size: clamp(0.8rem, 1.2vw, 0.88rem); line-height: 2.3; color: #555; font-weight: 300; }
+
+  /* STRENGTHS */
+  .slide-strengths { background: var(--white); }
+  .slide-strengths .slide-num { color: var(--light-gray); }
+  .s-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem; margin-top: 2.5rem; }
+  .s-card { padding: 1.8rem 1.4rem; border-top: 2px solid var(--gold); background: var(--off-white); }
+  .s-num { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; color: var(--gold-light); font-weight: 300; margin-bottom: 0.8rem; }
+  .s-title { font-family: 'Noto Serif JP', serif; font-weight: 400; font-size: clamp(0.88rem, 1.3vw, 1rem); color: var(--navy); letter-spacing: 0.08em; margin-bottom: 0.7rem; }
+  .s-desc { font-size: clamp(0.76rem, 1.1vw, 0.84rem); color: #666; line-height: 2; font-weight: 300; }
+
+  /* SERVICES */
+  .slide-services { background: var(--navy); }
+  .slide-services .slide-num { color: rgba(255,255,255,0.04); }
+  .slide-services .section-label { color: var(--gold); }
+  .slide-services .section-title { color: var(--white); }
+  .svc-list { margin-top: 2.5rem; }
+  .svc-item { display: grid; grid-template-columns: 190px 1fr; gap: 2rem; padding: 1.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .svc-item:first-child { border-top: 1px solid rgba(255,255,255,0.1); }
+  .svc-name { font-family: 'Noto Serif JP', serif; font-weight: 300; font-size: clamp(0.85rem, 1.3vw, 0.95rem); color: var(--gold); letter-spacing: 0.1em; }
+  .svc-desc { font-size: clamp(0.78rem, 1.1vw, 0.86rem); color: rgba(255,255,255,0.68); line-height: 2.1; font-weight: 300; }
+
+  /* FOR WHOM */
+  .slide-forwho { background: var(--off-white); }
+  .slide-forwho .slide-num { color: rgba(30,39,97,0.07); }
+  .fw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 2.5rem; }
+  .fw-card { background: var(--white); padding: 1.8rem; position: relative; overflow: hidden; }
+  .fw-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--gold); }
+  .fw-title { font-family: 'Noto Serif JP', serif; font-weight: 400; font-size: clamp(0.85rem, 1.3vw, 0.95rem); color: var(--navy); letter-spacing: 0.08em; margin-bottom: 0.7rem; }
+  .fw-desc { font-size: clamp(0.76rem, 1.1vw, 0.82rem); color: #666; line-height: 2; font-weight: 300; }
+
+  /* CONTACT */
+  .slide-contact { background: var(--navy); flex-direction: column; text-align: center; }
+  .slide-contact::before { content: ''; position: absolute; bottom: -20%; left: -10%; width: 60%; height: 140%; background: radial-gradient(ellipse, rgba(201,169,110,0.1) 0%, transparent 70%); pointer-events: none; }
+  .c-label { font-family: 'Cormorant Garamond', serif; font-size: 0.72rem; letter-spacing: 0.5em; color: var(--gold); text-transform: uppercase; margin-bottom: 1.5rem; }
+  .c-title { font-family: 'Noto Serif JP', serif; font-weight: 200; font-size: clamp(1.4rem, 3vw, 2.2rem); color: var(--white); letter-spacing: 0.12em; line-height: 1.9; margin-bottom: 2.5rem; }
+  .c-divider { width: 50px; height: 1px; background: var(--gold); margin: 0 auto 2.5rem; }
+  .c-rows { display: flex; flex-direction: column; gap: 1rem; align-items: center; }
+  .c-row { display: flex; align-items: center; gap: 1.2rem; }
+  .c-key { font-family: 'Cormorant Garamond', serif; font-size: 0.72rem; letter-spacing: 0.3em; color: var(--gold); text-transform: uppercase; width: 70px; text-align: right; }
+  .c-val { font-size: clamp(0.8rem, 1.3vw, 0.88rem); color: rgba(255,255,255,0.72); font-weight: 300; }
+  .c-footer { position: absolute; bottom: 1.8rem; left: 0; right: 0; text-align: center; font-family: 'Cormorant Garamond', serif; font-size: 0.65rem; letter-spacing: 0.3em; color: rgba(255,255,255,0.2); text-transform: uppercase; }
+
+  /* BELIEF */
+  .slide-belief { background: var(--off-white); }
+  .slide-belief .slide-num { color: rgba(30,39,97,0.07); }
+  .belief-list { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 0; }
+  .belief-item { display: grid; grid-template-columns: 2.5rem 1fr; gap: 1.5rem; padding: 2rem 0; border-bottom: 1px solid var(--light-gray); align-items: start; }
+  .belief-item:first-child { border-top: 1px solid var(--light-gray); }
+  .belief-index { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; color: var(--gold-light); font-weight: 300; line-height: 1.2; }
+  .belief-content {}
+  .belief-title { font-family: 'Noto Serif JP', serif; font-weight: 400; font-size: clamp(0.95rem, 1.5vw, 1.1rem); color: var(--navy); letter-spacing: 0.08em; margin-bottom: 0.8rem; line-height: 1.7; }
+  .belief-body { font-size: clamp(0.78rem, 1.2vw, 0.87rem); color: #555; line-height: 2.3; font-weight: 300; letter-spacing: 0.03em; }
+
+  /* MESSAGE */
+  .slide-message { background: var(--navy); }
+  .slide-message .slide-num { color: rgba(255,255,255,0.04); }
+  .slide-message .section-label { color: var(--gold); }
+  .slide-message .section-title { color: var(--white); }
+  .msg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2.5rem; }
+  .msg-block { padding: 2rem; border: 1px solid rgba(255,255,255,0.1); position: relative; }
+  .msg-block-label { font-family: 'Cormorant Garamond', serif; font-size: 0.68rem; letter-spacing: 0.4em; color: var(--gold); text-transform: uppercase; margin-bottom: 1rem; display: block; }
+  .msg-block-title { font-family: 'Noto Serif JP', serif; font-weight: 300; font-size: clamp(0.95rem, 1.5vw, 1.1rem); color: var(--white); letter-spacing: 0.08em; margin-bottom: 1rem; line-height: 1.7; }
+  .msg-block-body { font-size: clamp(0.78rem, 1.1vw, 0.85rem); color: rgba(255,255,255,0.65); line-height: 2.2; font-weight: 300; }
+  .msg-personal { margin-top: 2rem; padding: 2rem; background: rgba(201,169,110,0.08); border-left: 3px solid var(--gold); }
+  .msg-personal-text { font-family: 'Noto Serif JP', serif; font-weight: 200; font-size: clamp(0.88rem, 1.4vw, 1rem); color: rgba(255,255,255,0.85); line-height: 2.3; letter-spacing: 0.05em; }
+
+  /* TIMELINE */
+  .slide-timeline { background: var(--white); }
+  .slide-timeline .slide-num { color: var(--light-gray); }
+  .tl-wrap { margin-top: 2.5rem; position: relative; padding-left: 2rem; }
+  .tl-wrap::before { content: ''; position: absolute; left: 0; top: 0.4rem; bottom: 0; width: 1px; background: linear-gradient(to bottom, var(--gold), var(--gold-light), transparent); }
+  .tl-item { position: relative; padding: 0 0 2.2rem 2rem; }
+  .tl-item::before { content: ''; position: absolute; left: -2rem; top: 0.45rem; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); transform: translateX(-3px); }
+  .tl-year { font-family: 'Cormorant Garamond', serif; font-size: 0.72rem; letter-spacing: 0.35em; color: var(--gold); text-transform: uppercase; margin-bottom: 0.3rem; }
+  .tl-title { font-family: 'Noto Serif JP', serif; font-weight: 400; font-size: clamp(0.88rem, 1.3vw, 0.98rem); color: var(--navy); letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+  .tl-desc { font-size: clamp(0.76rem, 1.1vw, 0.83rem); color: #666; line-height: 2; font-weight: 300; }
+
+  @media (max-width: 680px) {
+    .msg-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+  .reveal { opacity: 1; transform: translateY(0); transition: opacity 0.8s ease, transform 0.8s ease; }
+
+  @media (max-width: 680px) {
+    .slide { padding: 4rem 1.8rem; }
+    .s-grid, .fw-grid { grid-template-columns: 1fr; }
+    .svc-item { grid-template-columns: 1fr; gap: 0.4rem; }
+    .profile-wrap { flex-direction: column; gap: 2rem; }
+    .cover-roles { gap: 0.7rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav-dots">
+  <button class="nav-dot active" onclick="goToSlide(0)"></button>
+  <button class="nav-dot" onclick="goToSlide(1)"></button>
+  <button class="nav-dot" onclick="goToSlide(2)"></button>
+  <button class="nav-dot" onclick="goToSlide(3)"></button>
+  <button class="nav-dot" onclick="goToSlide(4)"></button>
+  <button class="nav-dot" onclick="goToSlide(5)"></button>
+  <button class="nav-dot" onclick="goToSlide(6)"></button>
+  <button class="nav-dot" onclick="goToSlide(7)"></button>
+  <button class="nav-dot" onclick="goToSlide(8)"></button>
+  <button class="nav-dot" onclick="goToSlide(9)"></button>
+</nav>
+
+<!-- 1. COVER -->
+<section class="slide slide-cover" id="s0">
+  <p class="cover-en">Creative Director &amp; Educator</p>
+  <h1 class="cover-name-jp">森本 奈美</h1>
+  <p class="cover-name-en">Nami Morimoto</p>
+  <div class="cover-divider"></div>
+  <p class="cover-tagline">あなたの心の、灯火をつくる。<br><span style="font-size:0.85em;opacity:0.7;">心のエネルギーが循環する世界を、ビジュアルで創る。</span></p>
+  <div class="cover-roles">
+    <span class="cover-role">Creative Director</span>
+    <span class="cover-role">Illustrator</span>
+    <span class="cover-role">Educator</span>
+    <span class="cover-role">Art Supervisor</span>
+  </div>
+</section>
+
+<!-- 2. VISION -->
+<section class="slide slide-vision" id="s1">
+  <div class="slide-num">01</div>
+  <div class="inner reveal">
+    <span class="section-label">Vision &amp; Philosophy</span>
+    <h2 class="section-title">創造とは、<br>生きることそのものである。</h2>
+    <blockquote class="vision-quote">
+      「創造する」とは何かをつくることではなく、<br>人・環境・世の中すべてに<strong style="font-weight:400;">何かを与える存在として生きること</strong>。
+    </blockquote>
+    <p class="vision-body">波乱の現代において、本当に必要とされるのは外側の正解ではなく、自分の内側にある光です。アートとビジュアルは、その光を見つけ、日常の中に灯し続けるための装置です。<br><br>人は共生の生き物です。私たちが創るものは顧客の心を反映し、心そのものとなり、その人が誰かに与え続ける力の支えになります。</p>
+    <span class="vision-kw">心のエネルギーの循環</span>
+  </div>
+</section>
+
+<!-- 3. PROFILE -->
+<section class="slide slide-profile" id="s2">
+  <div class="slide-num">02</div>
+  <div class="inner reveal">
+    <span class="section-label">Profile</span>
+    <div class="profile-wrap">
+      <div class="photo-frame">
+        <div class="photo-placeholder">
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="18" r="8" stroke="#AAA" stroke-width="1.5"/><path d="M8 40c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="#AAA" stroke-width="1.5"/></svg>
+          <span>Photo</span>
+        </div>
+        <div class="photo-border"></div>
+      </div>
+      <div class="profile-detail">
+        <h2 class="p-name-jp">森本 奈美</h2>
+        <p class="p-name-en">Nami Morimoto</p>
+        <div class="p-tags">
+          <span class="p-tag">イラスト制作会社 代表</span>
+          <span class="p-tag">クリエイティブディレクター</span>
+          <span class="p-tag">専門学校 講師</span>
+        </div>
+        <p class="p-bio">名古屋を拠点に、イラスト・キャラクターデザイン・ビジュアル制作を手がけるクリエイティブ制作会社を主宰。ゲーム・アニメ・企業案件を中心にリピート率95%の信頼関係を築く。<br><br>専門学校では講師として次世代クリエイターの育成にも従事。制作現場で培った経験と、ビジネス・教育両面からの視点を活かし、クリエイティブの本質的な価値を伝えることを使命とする。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. TIMELINE -->
+<section class="slide slide-timeline" id="s3">
+  <div class="slide-num">03</div>
+  <div class="inner reveal">
+    <span class="section-label">Career Timeline</span>
+    <h2 class="section-title">歩んできた道</h2>
+    <div class="tl-wrap">
+      <div class="tl-item">
+        <p class="tl-year">幼少期〜高校</p>
+        <p class="tl-title">アートへの目覚め</p>
+        <p class="tl-desc">幼少期よりアニメ・音楽などクリエイティブに親しむ。中学受験期に美術・音楽どちらで生計を立てるかを熟慮し、音楽を「心のオアシス」として残し、絵の道を選択。美術科高校へ進学。</p>
+      </div>
+      <div class="tl-item">
+        <p class="tl-year">専門学校時代</p>
+        <p class="tl-title">大阪のアニメーター専門学校へ入学</p>
+        <p class="tl-desc">日本のカルチャー・アニメ表現を学ぶために大阪へ。金銭的な事情により地元名古屋へ帰郷。当時名古屋にアニメ会社は存在せず、アニメ業界への直接入社は叶わなかった。</p>
+      </div>
+      <div class="tl-item">
+        <p class="tl-year">20代</p>
+        <p class="tl-title">ゲーム会社勤務</p>
+        <p class="tl-desc">名古屋のゲーム会社に就職し、グラフィッカー、アートディレクターとして約6年間のキャリアを経る。チーム制作・品質管理・方向性設計の実務を経験。</p>
+      </div>
+      <div class="tl-item">
+        <p class="tl-year">独立〜個人事業</p>
+        <p class="tl-title">屋号にて独立。チーム制・分業制の制作スタイルを確立</p>
+        <p class="tl-desc">版権イラスト制作・ゲーム素材の請負制作を、チームでの分業体制で受注。個人事業主として約3年間、現在の制作スタイルの原型を築く。</p>
+      </div>
+      <div class="tl-item">
+        <p class="tl-year">法人化</p>
+        <p class="tl-title">クリエイティブ制作会社 設立</p>
+        <p class="tl-desc">1年間の葛藤を経て、自身の成長のために法人化を決断。クリエイターとしての視点と経営者としての視点の統合に向き合い、「ものづくり」から「人づくり」への深化を経験。</p>
+      </div>
+      <div class="tl-item">
+        <p class="tl-year">現在 / 開設8年目</p>
+        <p class="tl-title">代表取締役 / クリエイティブディレクター / 専門学校講師</p>
+        <p class="tl-desc">創業メンバーと新たな仲間と共に、ゲーム・アニメ・企業案件を中心に受注。専門学校での講師業・監修業を並行し、クリエイティブの本質的な価値を社会へ届けることを使命とする。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. MESSAGE -->
+<section class="slide slide-message" id="s4">
+  <div class="slide-num">04</div>
+  <div class="inner reveal">
+    <span class="section-label">Why I'm Here</span>
+    <h2 class="section-title">なぜ、アートなのか。<br>クリエイターとして、何をしているのか。</h2>
+    <div class="msg-grid">
+      <div class="msg-block">
+        <span class="msg-block-label">Why Art?</span>
+        <h3 class="msg-block-title">波乱の時代に、<br>アートができること。</h3>
+        <p class="msg-block-body">外の世界が不安定になるほど、人は「内側の安定」を求めます。アートは逃避ではなく、自分の内にある光を見つけ、それと共に生きていくための道具。だからこそ今、ビジュアルの力は最も必要とされています。</p>
+      </div>
+      <div class="msg-block">
+        <span class="msg-block-label">What I'm Doing</span>
+        <h3 class="msg-block-title">本質的には、<br>人の創造力を灯すこと。</h3>
+        <p class="msg-block-body">私がつくるものは、完成した瞬間に「作品」ではなく「その人の心」になります。それを持ち歩き、飾り、迷ったときに立ち戻る——そうして人は、誰かに与え続ける存在でいられる。ビジュアルはその循環の起点です。</p>
+      </div>
+    </div>
+    <div class="msg-personal">
+      <p class="msg-personal-text">幼い頃から、アニメや音楽など「つくられたもの」に救われてきました。家族や沢山の友人と共に過ごしながらも、1人で絵を描き、本を読み、内観する時間は、本当の私の時間でした。その体験が、今の仕事の根っこにあります。<br><br>クリエイターとして、経営者として、教育者として——三つの立場を生きてきた中で気づいたのは、「ものづくり」の先には必ず「人づくり」があるということ。そして、この循環を創ることが、共生の道であり、私がこの仕事を続ける理由です。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. BELIEF -->
+<section class="slide slide-belief" id="s5">
+  <div class="slide-num">05</div>
+  <div class="inner reveal">
+    <span class="section-label">My Belief</span>
+    <h2 class="section-title">仕事を通じて、<br>気づいたこと。</h2>
+    <div class="belief-list">
+      <div class="belief-item">
+        <span class="belief-index">01</span>
+        <div class="belief-content">
+          <h3 class="belief-title">描く技術と、届ける技術は違う。</h3>
+          <p class="belief-body">独立して最初に学んだことです。どれだけ品質の高いものをつくれても、それを届けたいなら「届ける技術」も別に学ぶ必要がある。良いものが作れるという自負があっても、それを届けたいという意思と技術がなければ、ビジネスは成り立たない——制作の世界では語られにくい、でも本質的なことだと感じています。</p>
+        </div>
+      </div>
+      <div class="belief-item">
+        <span class="belief-index">02</span>
+        <div class="belief-content">
+          <h3 class="belief-title">「良いもの」とは、恣意的な見方に過ぎない。</h3>
+          <p class="belief-body">自分がつくるものが「良いもの」だ、というのは「私にとっての良いもの」。ビジネスのアートの世界では、「顧客にとっての良いもの」をしっかり知ることが先にある。急ぎの事情がない限り、私はここの把握に最も重きを置いています。その指標を一緒に探すことも、私の仕事の一部です。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. STRENGTHS -->
+<section class="slide slide-strengths" id="s6">
+  <div class="slide-num">06</div>
+  <div class="inner reveal">
+    <span class="section-label">Strengths</span>
+    <h2 class="section-title">三つの視点が交わる、<br>唯一のポジション。</h2>
+    <div class="s-grid">
+      <div class="s-card">
+        <p class="s-num">01</p>
+        <h3 class="s-title">クリエイターとしての目</h3>
+        <p class="s-desc">イラストレーター・キャラクターデザイナーとして現場で培った審美眼と技術力。作品の価値を本質から語れる。</p>
+      </div>
+      <div class="s-card">
+        <p class="s-num">02</p>
+        <h3 class="s-title">経営者としての視点</h3>
+        <p class="s-desc">創業から8年にわたって制作スタジオを運営。ビジネス構造・収益設計・チームマネジメントの実践知を持つ。</p>
+      </div>
+      <div class="s-card">
+        <p class="s-num">03</p>
+        <h3 class="s-title">教育者としての言語化</h3>
+        <p class="s-desc">専門学校での講師経験により、クリエイティブの概念を体系化・言語化する力を持つ。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. SERVICES -->
+<section class="slide slide-services" id="s7">
+  <div class="slide-num">07</div>
+  <div class="inner reveal">
+    <span class="section-label">Services</span>
+    <h2 class="section-title">提供できること</h2>
+    <div class="svc-list">
+      <div class="svc-item">
+        <p class="svc-name">講師 / 登壇</p>
+        <p class="svc-desc">クリエイティブ思考・キャラクターデザイン・ビジュアルブランディングをテーマとした講義・ワークショップ・基調講演。専門学校・企業研修・イベント対応可。</p>
+      </div>
+      <div class="svc-item">
+        <p class="svc-name">監修 / アートディレクション</p>
+        <p class="svc-desc">ゲーム・アニメ・企業コンテンツのビジュアル監修。制作物の品質・方向性・ブランド一貫性を担保するアートディレクションを提供。</p>
+      </div>
+      <div class="svc-item">
+        <p class="svc-name">アドバイザリー</p>
+        <p class="svc-desc">クリエイティブ事業の戦略立案・組織設計・収益構造の見直しに関するアドバイザリー。経営者とクリエイター双方の視点から伴走支援。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. FOR WHOM -->
+<section class="slide slide-forwho" id="s8">
+  <div class="slide-num">08</div>
+  <div class="inner reveal">
+    <span class="section-label">For Whom</span>
+    <h2 class="section-title">こんな方・企業へ</h2>
+    <div class="fw-grid">
+      <div class="fw-card">
+        <h3 class="fw-title">教育機関・専門学校</h3>
+        <p class="fw-desc">クリエイティブ系・デザイン系学科における講師・特別講義のご依頼。現場経験と教育経験を持つ実践的な講師をお探しの方。</p>
+      </div>
+      <div class="fw-card">
+        <h3 class="fw-title">ゲーム・エンタメ企業</h3>
+        <p class="fw-desc">キャラクター・IPビジュアルの監修・アートディレクションをお求めの企業。外部専門家による品質担保・方向性設計をお求めの方。</p>
+      </div>
+      <div class="fw-card">
+        <h3 class="fw-title">企業の人材育成部門</h3>
+        <p class="fw-desc">社内クリエイターの育成・研修プログラム構築をご検討の企業。クリエイティブ思考を組織に取り入れたい方。</p>
+      </div>
+      <div class="fw-card">
+        <h3 class="fw-title">クリエイティブ事業者</h3>
+        <p class="fw-desc">制作会社・フリーランスの事業設計・ブランディング・収益化についてアドバイスを求めている方。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. CONTACT -->
+<section class="slide slide-contact" id="s9">
+  <h2 class="c-title">創造とは、生きることそのもの。<br><span style="font-size:0.75em; opacity:0.8;">その一歩を、共に。</span></h2>
+  <div class="c-divider"></div>
+  <p style="font-family:'Noto Serif JP',serif; font-weight:200; font-size:clamp(0.78rem,1.2vw,0.88rem); color:rgba(255,255,255,0.5); letter-spacing:0.1em; margin-bottom:2rem;">Contact</p>
+  <div class="c-rows">
+    <div class="c-row"><span class="c-key">Mail</span><span class="c-val"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="224b4c444d625b4d57500f464d4f434b4c0c414d4f">[email&#160;protected]</a></span></div>
+    <div class="c-row"><span class="c-key">Web</span><span class="c-val">www.your-domain.com</span></div>
+    <div class="c-row"><span class="c-key">Base</span><span class="c-val">Nagoya / Tokyo</span></div>
+  </div>
+  <p class="c-footer">Nami Morimoto — Creative Director &amp; Educator</p>
+</section>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.nav-dot');
+
+  function goToSlide(i) {
+    slides[i].scrollIntoView({ behavior: 'smooth' });
+  }
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const i = [...slides].indexOf(e.target);
+        dots.forEach(d => d.classList.remove('active'));
+        if (dots[i]) dots[i].classList.add('active');
+      }
+    });
+  }, { threshold: 0.5 });
+  slides.forEach(s => io.observe(s));
+
+  const ro = new IntersectionOb
