@@ -940,6 +940,7 @@ const COURSE_DATA = {
   kokura:       { straight: 293,   type: 'small', slope: false, corners: 4, name: '小倉' },
   sapporo:      { straight: 266.1, type: 'small', slope: false, corners: 4, name: '札幌' },
   hakodate:     { straight: 262,   type: 'small', slope: false, corners: 4, name: '函館' },
+  overseas:     { straight: 400,   type: 'mid',   slope: false, corners: 4, name: '海外' },
 };
 
 // ===== TABS =====
@@ -1392,7 +1393,7 @@ function addJissekiRow(data) {
   const gradeOpts = ['G1','G2','G3','JP','L','OP','3勝','2勝','1勝','未勝利'].map(g =>
     `<option value="${g}"${data&&data.grade==g?' selected':''}>${g}</option>`).join('');
 
-  const courseOpts = ['','tokyo','nakayama','hanshin_outer','hanshin_inner','kyoto_outer','kyoto_inner','chukyo','niigata_outer','niigata_inner','fukushima','kokura','sapporo','hakodate'].map(v => {
+  const courseOpts = ['','tokyo','nakayama','hanshin_outer','hanshin_inner','kyoto_outer','kyoto_inner','chukyo','niigata_outer','niigata_inner','fukushima','kokura','sapporo','hakodate','overseas'].map(v => {
     const label = v ? (COURSE_DATA[v]?.name || v) : '選択';
     return `<option value="${v}"${data&&data.pastCourse==v?' selected':''}>${label}</option>`;
   }).join('');
@@ -1408,9 +1409,15 @@ function addJissekiRow(data) {
       <span style="font-size:10px;color:var(--text3);font-weight:700;">実績${idx+1}</span>
       <button class="btn btn-danger btn-sm" onclick="removeJissekiRow(${idx})">削除</button>
     </div>
-    <div class="form-group" style="margin-bottom:8px;">
-      <label>レース名</label>
-      <input type="text" id="j${idx}-racename" placeholder="例：天皇賞秋2022" value="${data&&data.raceName||''}" style="font-size:12px;">
+    <div class="form-grid" style="gap:6px;margin-bottom:8px;">
+      <div class="form-group">
+        <label>レース名</label>
+        <input type="text" id="j${idx}-racename" list="racename-datalist" placeholder="例：天皇賞秋2022" value="${data&&data.raceName||''}" style="font-size:12px;">
+      </div>
+      <div class="form-group">
+        <label>開催日</label>
+        <input type="date" id="j${idx}-racedate" value="${data&&data.raceDate||''}" style="font-size:12px;">
+      </div>
     </div>
     <div class="form-grid cols3" style="gap:6px;">
       <div class="form-group">
@@ -1448,6 +1455,7 @@ function collectJissekiRows() {
     if (!row) continue;
     rows.push({
       raceName:   document.getElementById('j'+i+'-racename')?.value.trim() || '',
+      raceDate:   document.getElementById('j'+i+'-racedate')?.value || '',
       grade:      document.getElementById('j'+i+'-grade')?.value || '',
       rank:       parseInt(document.getElementById('j'+i+'-rank')?.value) || 1,
       pastCourse: document.getElementById('j'+i+'-course')?.value || '',
@@ -1512,7 +1520,8 @@ function onRaceNameInput(idx) {
 }
 
 function addKeikaRow(data) {
-  if (keikaCount >= 5) { showToast('最大5走まで入れられるわ'); return; }
+  // 手動追加時のみ5走制限（データ読み込み時は無制限）
+  if (!data && keikaCount >= 5) { showToast('最大5走まで入れられるわ'); return; }
   const idx = keikaCount++;
   const div = document.createElement('div');
   div.id = 'keika-row-'+idx;
@@ -1536,7 +1545,7 @@ function addKeikaRow(data) {
 
   const gradeOpts = ['G1','G2','G3','JP','L','OP','3勝','2勝','1勝','未勝利'].map(g=>`<option value="${g}"${data&&data.grade==g?' selected':''}>${g}</option>`).join('');
 
-  const courseOpts = ['','tokyo','nakayama','hanshin_outer','hanshin_inner','kyoto_outer','kyoto_inner','chukyo','niigata_outer','niigata_inner','fukushima','kokura','sapporo','hakodate'].map(v=>{
+  const courseOpts = ['','tokyo','nakayama','hanshin_outer','hanshin_inner','kyoto_outer','kyoto_inner','chukyo','niigata_outer','niigata_inner','fukushima','kokura','sapporo','hakodate','overseas'].map(v=>{
     const label = v ? (COURSE_DATA[v]?.name || v) : '選択';
     return `<option value="${v}"${data&&data.pastCourse==v?' selected':''}>${label}</option>`;
   }).join('');
@@ -1762,6 +1771,7 @@ function analyzeAll() {
     kaibaku: parseInt(document.getElementById('race-kaibaku').value) || 5,
     nigemas: parseInt(document.getElementById('race-nigemas').value) || 1,
     tosu: parseInt(document.getElementById('race-tosu').value) || 16,
+    raceDate: document.getElementById('race-date').value || '',
   };
 
   const courseInfo = COURSE_DATA[raceInfo.course] || { straight: 400, type: 'mid', slope: false, name: '不明' };
@@ -1989,6 +1999,7 @@ function renderResult(analyzed, race, course) {
     <div class="section">
       <div class="section-title">🏟 ${race.name}</div>
       <div style="font-size:11px;color:var(--text3);line-height:1.8;">
+        ${race.raceDate ? `📅 ${race.raceDate}<br>` : ''}
         ${courseName} ${race.distance}m ${race.surface==='turf'?'芝':'ダート'} | ${grade}<br>
         馬場：${{good:'良',yayashige:'稍重',heavy:'重',furyou:'不良'}[race.baba]} ${race.cushion?'クッション '+race.cushion:''}
         | 直線 ${course.straight}m ${course.slope?'急坂あり':''}
@@ -2095,7 +2106,7 @@ function renderHorseDetail(h) {
         <div style="margin-top:10px;">
           <div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;margin-bottom:4px;">PAST RACES</div>
           <table class="keika-table">
-            <thead><tr><th>#</th><th>レース名</th><th>場/距</th><th>G</th><th>着/頭</th><th>1C</th><th>2C</th><th>3C</th><th>4C</th><th>上り</th><th>Rt</th><th>P</th></tr></thead>
+            <thead><tr><th>#</th><th>日付</th><th>レース名</th><th>場/距</th><th>G</th><th>着/頭</th><th>1C</th><th>2C</th><th>3C</th><th>4C</th><th>上り</th><th>Rt</th><th>P</th></tr></thead>
             <tbody>
               ${h.keika.map((k,i)=>{
                 const ci = COURSE_DATA[k.pastCourse];
@@ -2107,21 +2118,52 @@ function renderHorseDetail(h) {
                   ? `${isFlash?'<span style="color:#ffd700;font-weight:700;">⚡</span>':''}${k.agari}s`
                   : '—';
                 const rtLabel = k.rt != null ? k.rt : '—';
+                const dateLabel = k.raceDate ? k.raceDate.slice(5) : '—';
+                const isOverseas = k.pastCourse === 'overseas';
                 return `
                 <tr>
                   <td style="color:var(--text3)">${i+1}</td>
-                  <td style="color:var(--text2);font-size:10px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${k.raceName||''}">${k.raceName||'—'}</td>
+                  <td style="font-size:9px;color:var(--text3)">${dateLabel}</td>
+                  <td style="color:var(--text2);font-size:10px;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${k.raceName||''}">${k.raceName||'—'}</td>
                   <td style="font-size:10px;color:var(--text3);white-space:nowrap;">${courseLabel}<br>${distLabel}${babaLabel!=='—'?'·'+babaLabel:''}</td>
                   <td><span class="badge badge-rank" style="font-size:9px;padding:1px 5px;">${k.grade||'—'}</span></td>
                   <td><span class="rank-circle ${k.rank<=3?'rank-'+k.rank:'rank-other'}">${k.rank}</span><span style="color:var(--text3);font-size:9px;">/${k.tosu}</span></td>
-                  <td>${k.c1||'—'}</td><td>${k.c2||'—'}</td><td>${k.c3||'—'}</td><td>${k.c4||'—'}</td>
-                  <td>${agariDisplay}</td>
+                  <td>${isOverseas?'—':k.c1||'—'}</td><td>${isOverseas?'—':k.c2||'—'}</td><td>${isOverseas?'—':k.c3||'—'}</td><td>${isOverseas?'—':k.c4||'—'}</td>
+                  <td>${isOverseas?'—':agariDisplay}</td>
                   <td style="color:${k.rt>=115?'var(--gold)':k.rt>=110?'var(--accent2)':'var(--text3)'};font-size:10px;font-weight:${k.rt>=110?'700':'400'};">${rtLabel}</td>
-                  <td style="color:${k.pace==='high'?'var(--red)':k.pace==='slow'?'var(--green)':k.pace==='unknown'?'var(--text3)':'var(--accent)'}">${k.pace==='high'?'H':k.pace==='slow'?'S':k.pace==='unknown'?'？':'M'}</td>
+                  <td style="color:${k.pace==='high'?'var(--red)':k.pace==='slow'?'var(--green)':k.pace==='unknown'?'var(--text3)':'var(--accent)'}">${isOverseas?'—':k.pace==='high'?'H':k.pace==='slow'?'S':k.pace==='unknown'?'？':'M'}</td>
                 </tr>`;
               }).join('')}
             </tbody>
           </table>
+        </div>` : ''}
+
+      ${h.jisseki && h.jisseki.length ? `
+        <div style="margin-top:8px;">
+          <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.textContent=this.textContent.includes('▶')?'▼ 過去実績（${h.jisseki.length}件）':'▶ 過去実績（${h.jisseki.length}件）';"
+            style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;background:none;border:none;cursor:pointer;padding:4px 0;">
+            ▶ 過去実績（${h.jisseki.length}件）
+          </button>
+          <div style="display:none;">
+            <table class="keika-table" style="margin-top:4px;">
+              <thead><tr><th>日付</th><th>レース名</th><th>場/距</th><th>G</th><th>着</th></tr></thead>
+              <tbody>
+                ${h.jisseki.map(j=>{
+                  const ci = COURSE_DATA[j.pastCourse];
+                  const cLabel = ci ? ci.name : (j.pastCourse||'—');
+                  const dLabel = j.pastDist ? j.pastDist+'m' : '—';
+                  const dateLabel = j.raceDate ? j.raceDate.slice(5) : '—';
+                  return `<tr>
+                    <td style="font-size:9px;color:var(--text3)">${dateLabel}</td>
+                    <td style="font-size:10px;color:var(--text2);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.raceName||'—'}</td>
+                    <td style="font-size:10px;color:var(--text3)">${cLabel}<br>${dLabel}</td>
+                    <td><span class="badge badge-rank" style="font-size:9px;padding:1px 5px;">${j.grade||'—'}</span></td>
+                    <td><span class="rank-circle ${j.rank<=3?'rank-'+j.rank:'rank-other'}">${j.rank}</span></td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>` : ''}
     </div>`;
 }
