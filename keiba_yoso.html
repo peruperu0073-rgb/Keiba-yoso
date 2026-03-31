@@ -550,7 +550,7 @@
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('input')">📝 入力</button>
-  <button class="tab" onclick="switchTab('result')">📊 結果</button>
+  <button class="tab" onclick="switchTab('result')">📊 分析</button>
   <button class="tab" onclick="switchTab('tenkai')">🌀 展開</button>
   <button class="tab" onclick="switchTab('saved')">💾 保存</button>
 </div>
@@ -717,7 +717,7 @@
       書き出したJSONファイルをLINEやメールで自分に送れば、どの端末でも読み込めるわよ✨
     </div>
     <div class="flex-gap">
-      <button class="btn btn-primary" onclick="exportJSON()" style="flex:1">📤 全データを書き出す</button>
+      <button class="btn btn-primary" onclick="exportJSON()" style="flex:1">📤 レースデータを書き出す</button>
       <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" style="flex:1">📥 ファイルを読み込む</button>
     </div>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
@@ -1115,16 +1115,20 @@ function calcRtScore(keika) {
 // 距離別⚡上がり基準
 function getAgariThreshold(distM) {
   const d = parseInt(distM) || 0;
-  if (d <= 1400) return 33.5;
-  if (d <= 2400) return 33.0;
-  return 33.5; // 3000m以上
+  if (d <= 1200) return 33.5;
+  if (d <= 1400) return 34.0;
+  if (d <= 1600) return 34.5;
+  if (d <= 1800) return 35.0;
+  if (d <= 2000) return 35.5;
+  if (d <= 2400) return 36.0;
+  return 36.5; // 3000m以上
 }
 
 // ⚡判定：絶対値基準 OR 全体上がりとの比較（どちらかでOK）
 function isAgariFlash(k) {
   if (k.agari == null) return false;
   const threshold = getAgariThreshold(k.pastDist);
-  const absFlash = k.agari <= threshold;
+  const absFlash = k.agari < threshold;
   const relFlash = k.agariAll != null && k.agari < k.agariAll - 0.5;
   return absFlash || relFlash;
 }
@@ -1242,27 +1246,40 @@ function loadHorseFromDB(name, slotNum) {
 function renderHorseSlots() {
   const container = document.getElementById('horse-slots');
   if (!container) return;
-  container.innerHTML = Array.from({length:18}, (_,i) => {
-    const num = i + 1;
-    const h = horses[i];
-    const wakuColors = {1:['#fff','#111'],2:['#111','#fff'],3:['#e05252','#fff'],4:['#5299e0','#fff'],5:['#f0c040','#111'],6:['#52c97a','#111'],7:['#e08050','#fff'],8:['#c070c0','#fff']};
-    const wc = h && h.waku ? (wakuColors[h.waku]||['#555','#fff']) : ['#2a2a3d','#5a5a72'];
+
+  // 登録済み馬を馬番順にソートして表示（スロットインデックスも保持）
+  const filled = horses
+    .map((h, i) => ({ h, i }))
+    .filter(x => x.h && x.h.name);
+  filled.sort((a, b) => (a.h.umaban || 99) - (b.h.umaban || 99));
+
+  const empty = horses
+    .map((h, i) => ({ h, i }))
+    .filter(x => !x.h || !x.h.name);
+
+  const sorted = [...filled, ...empty];
+
+  const wakuColors = {1:['#fff','#111'],2:['#111','#fff'],3:['#e05252','#fff'],4:['#5299e0','#fff'],5:['#f0c040','#111'],6:['#52c97a','#111'],7:['#e08050','#fff'],8:['#c070c0','#fff']};
+
+  container.innerHTML = sorted.map(({h, i}) => {
+    const slotNum = i + 1;
+    const wc = h && h.waku ? (wakuColors[h.waku] || ['#555','#fff']) : ['#2a2a3d','#5a5a72'];
     return `
     <div style="background:var(--surface2);border:1px solid ${h?'var(--accent)':'var(--border)'};border-radius:8px;padding:10px;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="width:28px;height:28px;border-radius:6px;background:${wc[0]};color:${wc[1]};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;flex-shrink:0;">${h&&h.waku?h.waku:'—'}</div>
-        <div style="font-size:11px;font-weight:700;color:var(--text3);width:28px;flex-shrink:0;">${num}番</div>
-        ${h ? `
+        <div style="font-size:11px;font-weight:700;color:var(--text3);width:36px;flex-shrink:0;">${h&&h.umaban?h.umaban+'番':'—番'}</div>
+        ${h && h.name ? `
           <div style="flex:1;">
             <div style="font-weight:700;font-size:13px;">${h.name}</div>
-            <div style="font-size:10px;color:var(--text3);">${(h.sex||'')}${h.age}歳 ${h.jockey||''} ${h.umaban?h.umaban+'番':''}/${h.waku?h.waku+'枠':''}</div>
+            <div style="font-size:10px;color:var(--text3);">${(h.sex||'')}${h.age}歳 ${h.jockey||''}</div>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="openHorseModal(${i})">編集</button>
           <button class="btn btn-danger btn-sm" onclick="removeHorseSlot(${i})">削除</button>
         ` : `
-          <div style="flex:1;color:var(--text3);font-size:12px;">未登録</div>
-          <button class="btn btn-secondary btn-sm" onclick="openHorseModalForSlot(${num})">✏️入力</button>
-          <button class="btn btn-secondary btn-sm" onclick="openDBSelectModal(${num})">📂読込</button>
+          <div style="flex:1;color:var(--text3);font-size:12px;">未登録（${slotNum}枠）</div>
+          <button class="btn btn-secondary btn-sm" onclick="openHorseModalForSlot(${slotNum})">✏️入力</button>
+          <button class="btn btn-secondary btn-sm" onclick="openDBSelectModal(${slotNum})">📂読込</button>
         `}
       </div>
     </div>`;
@@ -1877,13 +1894,20 @@ function analyzeHorse(h, race, course) {
     if (isDecline) minusFlags.push('🌀衰え傾向（近走低下）');
   }
 
+  // --- ベテラン実力勢フラグ ---
+  const gradedTop3 = allKeika.filter(k => ['G1','G2','G3'].includes(k.grade) && k.rank <= 3);
+  if (gradedTop3.length >= 5) noteFlags.push('🎖️ベテラン実力勢');
+
   const allFlags = [...plusFlags, ...noteFlags, ...minusFlags];
-  const anaScore = Math.min(plusFlags.length * 2 + noteFlags.length, 10);
+  // 注目度指数（旧・穴馬指数）：プラスフラグ×2 + 注目フラグ
+  const chuumokuScore = Math.min(plusFlags.length * 2 + noteFlags.length, 10);
+  // ⭐注目馬判定：プラスフラグ2個以上 かつ 注目度6pt以上
+  const isChuumoku = plusFlags.length >= 2 && chuumokuScore >= 6;
 
   let restPenalty = 0;
   if (h.rest === 'long') restPenalty = -2;
 
-  const totalScore = scores.rt + scores.course + scores.kyakushitsu + scores.blood + scores.dist + restPenalty;
+  const totalScore = scores.rt + scores.course + scores.kyakushitsu + scores.dist + restPenalty;
 
   return {
     ...h,
@@ -1893,7 +1917,8 @@ function analyzeHorse(h, race, course) {
     minusFlags,
     noteFlags,
     flags: allFlags,
-    anaScore,
+    chuumokuScore,
+    isChuumoku,
     totalScore: Math.max(0, totalScore),
     restPenalty,
     rank: 0,
@@ -2017,7 +2042,7 @@ function renderResult(analyzed, race, course) {
       ${analyzed.map((h, i) => {
         const wc = WAKU_COLORS[h.waku] || ['#888','#fff'];
         const posColor = i===0?'var(--gold)':i===1?'var(--silver)':i===2?'var(--bronze)':'var(--text3)';
-        const maxScore = 32;
+        const maxScore = 29;
         const pct = Math.round((h.totalScore/maxScore)*100);
 
         return `
@@ -2034,7 +2059,8 @@ function renderResult(analyzed, race, course) {
                 ${(h.minusFlags||[]).map(f=>`<span style="font-size:9px;color:#7ad4f0;">🌀${f}</span>`).join('')}
               </div>` : ''}
           </div>
-          <div style="text-align:right;flex-shrink:0;">
+          <div style="text-align:right;flex-shrink:0;position:relative;">
+            ${h.isChuumoku ? `<div style="font-size:9px;color:var(--gold);font-weight:700;animation:glowPulse 2s infinite;margin-bottom:2px;">⭐注目</div>` : ''}
             <div class="ranking-score">${h.totalScore}</div>
             <div style="font-size:10px;color:var(--text3);">${pct}%</div>
           </div>
@@ -2053,7 +2079,7 @@ function renderResult(analyzed, race, course) {
 
 function renderHorseDetail(h) {
   const wc = WAKU_COLORS[h.waku] || ['#888','#fff'];
-  const isAna = h.flags.length >= 2;
+  const isAna = h.isChuumoku;
 
   const maxRt = Math.max(h.scores.rt, 30);
 
@@ -2061,7 +2087,6 @@ function renderHorseDetail(h) {
     { label: 'Rtスコア',   val: h.scores.rt,          max: maxRt, color: '#e05252' },
     { label: 'コース適性', val: h.scores.course,       max: 10,    color: '#5299e0' },
     { label: '脚質×展開', val: h.scores.kyakushitsu,  max: 7,     color: '#e08050' },
-    { label: '血統適性',   val: h.scores.blood,        max: 5,     color: '#9b72cf' },
     { label: '距離適性',   val: h.scores.dist,         max: 6,     color: '#52c97a' },
   ];
 
@@ -2075,7 +2100,7 @@ function renderHorseDetail(h) {
         </div>
         <div class="badges">
           <span class="badge badge-kyakushitsu">${h.kyakushitsu}</span>
-          ${isAna?'<span class="badge badge-ana">⭐穴</span>':''}
+          ${isAna?'<span class="badge badge-ana">⭐注目</span>':''}
           <span class="badge ${h.totalScore>=20?'badge-score-high':h.totalScore>=12?'badge-score-mid':'badge-score-low'}">${h.totalScore}pt</span>
         </div>
       </div>
@@ -2089,7 +2114,7 @@ function renderHorseDetail(h) {
           <div class="score-val" style="color:${s.color}">${s.val}</div>
         </div>`).join('')}
 
-      ${(h.plusFlags && h.plusFlags.length) || (h.noteFlags && h.noteFlags.length) || (h.minusFlags && h.minusFlags.length) || h.anaScore > 0 ? `
+      ${(h.plusFlags && h.plusFlags.length) || (h.noteFlags && h.noteFlags.length) || (h.minusFlags && h.minusFlags.length) || h.chuumokuScore > 0 ? `
         <div style="margin-top:10px;">
           ${h.plusFlags && h.plusFlags.length ? `
             <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
@@ -2103,7 +2128,7 @@ function renderHorseDetail(h) {
             <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
               ${h.minusFlags.map(f=>`<span style="font-size:10px;color:#7ad4f0;">${f}</span>`).join('')}
             </div>` : ''}
-          ${h.anaScore > 0 ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;">穴馬指数 ${h.anaScore}pt</div>` : ''}
+          ${h.chuumokuScore > 0 ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;">注目度指数 ${h.chuumokuScore}pt</div>` : ''}
         </div>` : ''}
       ${h.memo ? `<div style="margin-top:8px;font-size:11px;color:var(--accent);background:rgba(201,168,76,0.08);border-radius:6px;padding:6px 10px;">📝 ${h.memo}</div>` : ''}
       ${h.restPenalty < 0 ? `<div style="margin-top:6px;font-size:10px;color:var(--red);">⚠️ 休み明け補正 ${h.restPenalty}pt</div>` : ''}
@@ -2228,16 +2253,16 @@ function renderTenkai(analyzed, race, course) {
           ${g.list.map(h=>`
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
               <span style="font-size:12px;font-weight:700;">${h.umaban?h.umaban+'番 ':''}${h.name}</span>
-              ${h.flags.length>=2?'<span class="badge badge-ana" style="font-size:9px;">⭐穴</span>':''}
+              ${h.isChuumoku?'<span class="badge badge-ana" style="font-size:9px;">⭐注目</span>':''}
               <span style="font-size:10px;color:var(--text3);margin-left:auto;">${h.totalScore}pt</span>
             </div>`).join('')}
         </div>`).join('')}
     </div>
 
     <div class="section">
-      <div class="section-title">⭐ 穴馬候補</div>
-      ${analyzed.filter(h=>h.flags.length>=2).length ?
-        analyzed.filter(h=>h.flags.length>=2).map(h=>`
+      <div class="section-title">⭐ 注目馬候補</div>
+      ${analyzed.filter(h=>h.isChuumoku).length ?
+        analyzed.filter(h=>h.isChuumoku).map(h=>`
           <div style="background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.25);border-radius:8px;padding:12px;margin-bottom:8px;">
             <div style="font-weight:700;font-size:14px;margin-bottom:6px;">
               ${h.umaban?h.umaban+'番 ':''}${h.name}
@@ -2250,7 +2275,7 @@ function renderTenkai(analyzed, race, course) {
             </div>
             ${h.memo?`<div style="margin-top:6px;font-size:11px;color:var(--accent);">📝 ${h.memo}</div>`:''}
           </div>`).join('')
-        : '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">条件を満たす穴馬候補は今のところいないわ</div>'}
+        : '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">条件を満たす注目馬候補は今のところいないわ</div>'}
     </div>
   `;
 
@@ -2379,9 +2404,11 @@ function exportJSON() {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const now = new Date();
+  const date = now.toISOString().slice(0,10).replace(/-/g,'');
+  const time = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
   a.href = url;
-  a.download = `keiba_yoso_${date}.json`;
+  a.download = `keiba_yoso_${date}_${time}.json`;
   a.click();
   URL.revokeObjectURL(url);
   showToast(`${saved.length}件のレースを書き出したわ！💾`);
