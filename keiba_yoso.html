@@ -1417,8 +1417,8 @@ function addJissekiRow(data) {
 
   div.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-size:10px;color:var(--text3);font-weight:700;">実績${idx+1}</span>
-      <button class="btn btn-danger btn-sm" onclick="removeJissekiRow(${idx})">削除</button>
+      <span class="jisseki-row-num" style="font-size:10px;color:var(--text3);font-weight:700;">実績?</span>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('[id^=jisseki-row-]').remove(); updateJissekiRowNums();">削除</button>
     </div>
     <div class="form-grid" style="gap:6px;margin-bottom:8px;">
       <div class="form-group">
@@ -1452,11 +1452,21 @@ function addJissekiRow(data) {
     </div>
   `;
   document.getElementById('jisseki-entries').appendChild(div);
+  updateJissekiRowNums();
 }
 
 function removeJissekiRow(idx) {
   const el = document.getElementById('jisseki-row-' + idx);
-  if (el) el.remove();
+  if (el) { el.remove(); updateJissekiRowNums(); }
+}
+
+function updateJissekiRowNums() {
+  const entries = document.getElementById('jisseki-entries');
+  if (!entries) return;
+  entries.querySelectorAll('[id^="jisseki-row-"]').forEach((row, i) => {
+    const numEl = row.querySelector('.jisseki-row-num');
+    if (numEl) numEl.textContent = `実績${i+1}`;
+  });
 }
 
 function collectJissekiRows() {
@@ -1572,8 +1582,8 @@ function addKeikaRow(data) {
 
   div.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-size:10px;color:var(--text3);font-weight:700;">第${idx+1}走</span>
-      <button class="btn btn-danger btn-sm" onclick="removeKeikaRow(${idx})">削除</button>
+      <span class="keika-row-num" style="font-size:10px;color:var(--text3);font-weight:700;">第?走</span>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('[id^=keika-row-]').remove(); updateKeikaRowNums();">削除</button>
     </div>
 
     <div class="form-grid" style="gap:6px;margin-bottom:8px;">
@@ -1663,17 +1673,26 @@ function addKeikaRow(data) {
   if (data) {
     const sels = div.querySelectorAll('.corner-inputs select');
     ['c1','c2','c3','c4'].forEach((k,i)=>{
-      if (data[k]) sels[i].value = data[k];
+      if (data[k] && data[k] !== '—') sels[i].value = data[k];
     });
   }
 
-  // datalist更新
+  updateKeikaRowNums();
   refreshRaceNameList();
 }
 
 function removeKeikaRow(idx) {
   const el = document.getElementById('keika-row-'+idx);
-  if (el) el.remove();
+  if (el) { el.remove(); updateKeikaRowNums(); }
+}
+
+function updateKeikaRowNums() {
+  const entries = document.getElementById('keika-entries');
+  if (!entries) return;
+  entries.querySelectorAll('[id^="keika-row-"]').forEach((row, i) => {
+    const numEl = row.querySelector('.keika-row-num');
+    if (numEl) numEl.textContent = `第${i+1}走`;
+  });
 }
 
 function collectKeikaRows() {
