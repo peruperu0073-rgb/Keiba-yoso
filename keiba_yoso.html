@@ -1395,7 +1395,8 @@ function autoDetectDistExp(manualVal, keika, targetDist) {
 let jissekiCount = 0;
 
 function addJissekiRow(data) {
-  const idx = jissekiCount++;
+  const idx = Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  jissekiCount++;
   const div = document.createElement('div');
   div.id = 'jisseki-row-' + idx;
   div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;';
@@ -1533,8 +1534,11 @@ function onRaceNameInput(idx) {
 
 function addKeikaRow(data) {
   // 手動追加時のみ5走制限（データ読み込み時は無制限）
-  if (!data && keikaCount >= 5) { showToast('最大5走まで入れられるわ'); return; }
-  const idx = keikaCount++;
+  const currentRows = document.getElementById('keika-entries')?.querySelectorAll('[id^="keika-row-"]').length || 0;
+  if (!data && currentRows >= 5) { showToast('最大5走まで入れられるわ'); return; }
+  // ユニークなIDを生成（keikaCountに依存しない）
+  const idx = Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  keikaCount++; // 互換性のためカウントは維持
   const div = document.createElement('div');
   div.id = 'keika-row-'+idx;
   div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;';
@@ -1674,7 +1678,6 @@ function removeKeikaRow(idx) {
 
 function collectKeikaRows() {
   const rows = [];
-  // keikaCountに依存せず、DOMに存在する行を全て収集
   const entries = document.getElementById('keika-entries');
   if (!entries) return rows;
   const allRows = entries.querySelectorAll('[id^="keika-row-"]');
@@ -1682,6 +1685,12 @@ function collectKeikaRows() {
     const i = row.id.replace('keika-row-', '');
     const sels = row.querySelectorAll('.corner-inputs select');
     const toCorner = v => (v && v !== '' && v !== '—') ? v : '—';
+    const getNum = id => {
+      const el = document.getElementById(id);
+      if (!el || el.value === '' || el.value === null) return null;
+      const n = parseFloat(el.value);
+      return (isNaN(n) || n <= 0) ? null : n;
+    };
     rows.push({
       raceName:   document.getElementById('k'+i+'-racename')?.value.trim() || '',
       raceDate:   document.getElementById('k'+i+'-racedate')?.value || '',
@@ -1696,9 +1705,9 @@ function collectKeikaRows() {
       c2: toCorner(sels[1]?.value),
       c3: toCorner(sels[2]?.value),
       c4: toCorner(sels[3]?.value),
-      agari:    getNumericInput('k'+i+'-agari'),
-      agariAll: getNumericInput('k'+i+'-agari-all'),
-      rt:       getNumericInput('k'+i+'-rt'),
+      agari:    getNum('k'+i+'-agari'),
+      agariAll: getNum('k'+i+'-agari-all'),
+      rt:       getNum('k'+i+'-rt'),
       pastUmaban: parseInt(document.getElementById('k'+i+'-umaban')?.value) || null,
     });
   });
