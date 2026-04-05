@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>見積書 EST-2604-001</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #FF4B4B;
+    --blue: #3B82F6;
+    --yellow: #FFCE00;
+    --black: #1A1A1A;
+    --gray: #F7F7F7;
+    --mid-gray: #E8E8E8;
+    --text-gray: #666;
+    --white: #FFFFFF;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #FAFAFA;
+    color: var(--black);
+    padding: 40px 20px;
+  }
+
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    background: var(--white);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--black);
+    padding: 36px 48px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--red) 33%, var(--blue) 33% 66%, var(--yellow) 66%);
+  }
+  .header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .doc-title {
+    font-family: 'Nunito', sans-serif;
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  .doc-title span {
+    color: var(--yellow);
+  }
+  .doc-meta {
+    text-align: right;
+  }
+  .doc-meta p {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.8;
+  }
+  .doc-meta strong {
+    color: var(--white);
+    font-weight: 600;
+  }
+
+  /* BODY */
+  .body {
+    padding: 40px 48px;
+  }
+
+  /* TO / FROM */
+  .parties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 36px;
+  }
+  .party-box {
+    background: var(--gray);
+    border-radius: 14px;
+    padding: 20px 24px;
+    position: relative;
+  }
+  .party-label {
+    font-family: 'Nunito', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .party-label.to { color: var(--red); }
+  .party-label.from { color: var(--blue); }
+  .party-name {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .party-detail {
+    font-size: 11px;
+    color: var(--text-gray);
+    margin-top: 4px;
+    line-height: 1.7;
+  }
+  .party-box.to { border-left: 4px solid var(--red); }
+  .party-box.from { border-left: 4px solid var(--blue); }
+
+  /* AMOUNT HERO */
+  .amount-hero {
+    background: var(--yellow);
+    border-radius: 16px;
+    padding: 28px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 36px;
+  }
+  .amount-label {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--black);
+    opacity: 0.6;
+  }
+  .amount-value {
+    font-family: 'Nunito', sans-serif;
+    font-size: 40px;
+    font-weight: 900;
+    color: var(--black);
+    letter-spacing: -1px;
+  }
+  .amount-note {
+    font-size: 11px;
+    color: var(--black);
+    opacity: 0.5;
+    margin-top: 4px;
+    text-align: right;
+  }
+
+  /* SECTION */
+  .section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .section-title.red::before { background: var(--red); }
+  .section-title.blue::before { background: var(--blue); }
+  .section-title.yellow::before { background: var(--yellow); border: 2px solid #ccc; }
+
+  /* INFO GRID */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 1px;
+    background: var(--mid-gray);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .info-label, .info-value {
+    padding: 12px 16px;
+    font-size: 13px;
+    background: var(--white);
+  }
+  .info-label {
+    background: var(--gray);
+    font-weight: 700;
+    color: var(--text-gray);
+  }
+
+  /* TABLE */
+  .estimate-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+  }
+  .estimate-table thead th {
+    font-family: 'Nunito', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-gray);
+    padding: 6px 14px;
+    text-align: left;
+  }
+  .estimate-table thead th:last-child { text-align: right; }
+  .estimate-table tbody tr {
+    background: var(--gray);
+    border-radius: 10px;
+  }
+  .estimate-table tbody td {
+    padding: 14px;
+    font-size: 13px;
+    vertical-align: top;
+  }
+  .estimate-table tbody td:first-child {
+    border-radius: 10px 0 0 10px;
+    font-weight: 700;
+  }
+  .estimate-table tbody td:last-child {
+    border-radius: 0 10px 10px 0;
+    text-align: right;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .item-desc {
+    font-size: 11px;
+    color: var(--text-gray);
+    margin-top: 3px;
+    font-weight: 400;
+  }
+  .tag {
+    display: inline-block;
+    background: var(--blue);
+    color: var(--white);
+    font-family: 'Nunito', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .tag.green { background: #22C55E; }
+
+  /* TOTALS */
+  .totals {
+    margin-top: 12px;
+    border-top: 2px dashed var(--mid-gray);
+    padding-top: 16px;
+  }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+  .total-row.subtotal { color: var(--text-gray); }
+  .total-row.tax { color: var(--text-gray); }
+  .total-row.grand {
+    background: var(--black);
+    color: var(--white);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 8px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 18px;
+  }
+  .total-row.grand .total-amount {
+    font-size: 26px;
+    letter-spacing: -0.5px;
+  }
+
+  /* PAYMENT */
+  .payment-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .payment-card {
+    border-radius: 12px;
+    padding: 16px 20px;
+    border: 2px solid var(--mid-gray);
+  }
+  .payment-card-label {
+    font-family: 'Nunito', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .payment-card-label.red { color: var(--red); }
+  .payment-card-label.blue { color: var(--blue); }
+  .payment-card-value {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .payment-card-note {
+    font-size: 11px;
+    color: var(--text-gray);
+    margin-top: 4px;
+  }
+
+  /* NOTICE BOX */
+  .notice-box {
+    background: var(--gray);
+    border-radius: 12px;
+    padding: 18px 22px;
+    border-left: 4px solid var(--red);
+  }
+  .notice-box p {
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--black);
+  }
+  .notice-box p + p { margin-top: 6px; }
+  .notice-box .notice-note {
+    color: var(--text-gray);
+    font-size: 11px;
+    margin-top: 8px;
+  }
+
+  /* FOOTER */
+  .footer {
+    background: var(--black);
+    padding: 28px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-company {
+    color: var(--white);
+  }
+  .footer-company strong {
+    font-size: 15px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .footer-company span {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.8;
+    display: block;
+  }
+  .footer-dots {
+    display: flex;
+    gap: 8px;
+  }
+  .footer-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+  }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .page { box-shadow: none; border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="doc-title">見積書<span>.</span></div>
+      <div class="doc-meta">
+        <p>見積番号 <strong>EST-2604-001</strong></p>
+        <p>発行日 <strong>2026年4月6日</strong></p>
+        <p>有効期限 <strong>2026年4月20日</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- TO / FROM -->
+    <div class="parties">
+      <div class="party-box to">
+        <div class="party-label to">TO &nbsp;お客様</div>
+        <div class="party-name">○○株式会社 御中</div>
+        <div class="party-detail">ご担当者様</div>
+      </div>
+      <div class="party-box from">
+        <div class="party-label from">FROM &nbsp;発行元</div>
+        <div class="party-name">株式会社○○</div>
+        <div class="party-detail">
+          代表取締役　森本 奈美<br>
+          〒XXX-XXXX 愛知県名古屋市○○<br>
+          info@xxxx.co.jp
+        </div>
+      </div>
+    </div>
+
+    <!-- AMOUNT HERO -->
+    <div class="amount-hero">
+      <div>
+        <div class="amount-label">お見積り金額（税込）</div>
+        <div class="amount-value">¥528,000</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="amount-note">税抜 ¥480,000</div>
+        <div class="amount-note">消費税（10%） ¥48,000</div>
+      </div>
+    </div>
+
+    <!-- 案件情報 -->
+    <div class="section">
+      <div class="section-title blue">案件情報</div>
+      <div class="info-grid">
+        <div class="info-label">件名</div>
+        <div class="info-value">イラスト制作一式</div>
+        <div class="info-label">依頼確定日</div>
+        <div class="info-value">2026年4月6日</div>
+        <div class="info-label">最終納品希望日</div>
+        <div class="info-value">2026年6月30日<span style="font-size:11px;color:#999;margin-left:8px;">※修正対応等により前後する場合があります</span></div>
+        <div class="info-label">制作点数</div>
+        <div class="info-value">4点</div>
+      </div>
+    </div>
+
+    <!-- 明細 -->
+    <div class="section">
+      <div class="section-title red">お見積り明細</div>
+      <table class="estimate-table">
+        <thead>
+          <tr>
+            <th style="width:30%">項目</th>
+            <th>内容・仕様</th>
+            <th style="width:8%">数量</th>
+            <th style="width:14%">単価</th>
+            <th style="width:16%">小計</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              イラスト制作費
+              <div class="item-desc">フルカラー／背景込み</div>
+            </td>
+            <td>
+              キャラクターイラスト<br>
+              <span class="tag green">修正2回まで含む</span>
+              <span class="tag" style="background:var(--blue); margin-left:4px;">ディレクション込</span>
+            </td>
+            <td style="text-align:center;">4</td>
+            <td style="text-align:right; font-family:'Nunito',sans-serif; font-weight:700;">¥120,000</td>
+            <td>¥480,000</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- TOTALS -->
+      <div class="totals">
+        <div class="total-row subtotal">
+          <span>小計（税抜）</span>
+          <span>¥480,000</span>
+        </div>
+        <div class="total-row tax">
+          <span>消費税（10%）</span>
+          <span>¥48,000</span>
+        </div>
+        <div class="total-row grand">
+          <span>合計（税込）</span>
+          <span class="total-amount">¥528,000</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- お支払いについて -->
+    <div class="section">
+      <div class="section-title yellow">お支払いについて</div>
+      <div class="payment-cards">
+        <div class="payment-card">
+          <div class="payment-card-label red">着手金（50%）</div>
+          <div class="payment-card-value">¥264,000（税込）</div>
+          <div class="payment-card-note">ご依頼確定後7営業日以内<br>ご入金確認後に制作を開始します</div>
+        </div>
+        <div class="payment-card">
+          <div class="payment-card-label blue">残金（50%）</div>
+          <div class="payment-card-value">¥264,000（税込）</div>
+          <div class="payment-card-note">最終納品後14営業日以内<br>銀行振込（振込手数料はご負担ください）</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 検収・納品について -->
+    <div class="section">
+      <div class="section-title red">検収・納品について</div>
+      <div class="notice-box">
+        <p>最終データご提出後、<strong>5営業日以内</strong>に書面（メール可）による修正のご指示がない場合は、検収完了とみなし請求書を発行させていただきます。</p>
+        <p>初稿確定後のコンセプト変更・構図変更・キャラクター変更等、制作の根幹に関わる変更は別途お見積りとなります。</p>
+        <p class="notice-note">※修正は1点につき2回まで含みます。3回目以降は別途ご相談となります。</p>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-company">
+      <strong>株式会社○○</strong>
+      <span>〒XXX-XXXX 愛知県名古屋市○○</span>
+      <span>TEL: 0XX-XXXX-XXXX　info@xxxx.co.jp</span>
+    </div>
+    <div class="footer-dots">
+      <div class="footer-dot" style="background:var(--red);"></div>
+      <div class="footer-dot" style="background:var(--blue);"></div>
+      <div class="footer-dot" style="background:var(--yellow);"></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
