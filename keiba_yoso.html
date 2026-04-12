@@ -1493,6 +1493,7 @@ let keikaCount = 0;
 // 登録済み馬の全レース名を重複なしで返す
 function getKnownRaceNames() {
   const names = new Set();
+  // TODO レース未登録の場合は何もしない
   horses.forEach(h => {
     (h.keika || []).forEach(k => { if (k.raceName) names.add(k.raceName); });
   });
@@ -1501,7 +1502,7 @@ function getKnownRaceNames() {
 
 // レース名入力欄のdatalistを更新
 function refreshRaceNameList() {
-  const list = document.getElementById('racename-datalist');
+  const list = document.getElementById('racename-datalist').value;
   if (!list) return;
   const names = getKnownRaceNames();
   list.innerHTML = names.map(n => `<option value="${n}">`).join('');
